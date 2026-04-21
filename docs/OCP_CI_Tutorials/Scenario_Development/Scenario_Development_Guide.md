@@ -116,7 +116,8 @@ tests:
   - `as` : The name of a test.
   - `cron` : The schedule this test should run on. For CSPI purposes, it should be set to `0 6 25 10 *`.
   - `steps` : A list of steps in this test object.
-    - `cluster_profile` : Used during test cluster provisioning. The CSPI cluster profile for an AWS cluster would be `aws-cspi-qe`. Please don't use the profile if you are not in the CSPI organization as it will charge our organization for your cluster provisioning.
+    - `cluster_profile` : Used during test cluster provisioning. The CSPI cluster profile for an AWS cluster would be `aws-cspi-qe`. Please don't use the profile if you are not in the CSPI organization as it will charge our organization for your cluster provisioning. 
+      - **Note:** When onboarding a scenario, if your GitHub organization and repository are not yet registered for this cluster profile, open a pull request against [openshift/release](https://github.com/openshift/release) to add them in [cluster-profiles-config.yaml](https://github.com/openshift/release/blob/master/ci-operator/step-registry/cluster-profiles/cluster-profiles-config.yaml) before you use `cluster_profile` in your config. Example PR: [#72472](https://github.com/openshift/release/pull/72472).
     - `env` : A list of environment variables needed for your tests to run. For each variable, use the following format: `{ENV_VAR_NAME}: {ENV_VAR_VALUE}`.
     - `test` : The list of chains and refs to execute, in order, in the test (scenario).
       - `chain` : Execute a chain, please see the [Step Registry - Chain Guide](../Step_Registry/Step_Registry_Chain_Guide.md) for more information.
