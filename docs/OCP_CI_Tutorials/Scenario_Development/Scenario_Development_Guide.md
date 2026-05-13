@@ -8,6 +8,7 @@
     - [Write the Scenario](#write-the-scenario)
     - [Build a Container Image to Execute Tests](#build-a-container-image-to-execute-tests)
   - [Reporting](#reporting)
+    - [Component Readiness](#component-readiness)
     - [TestGrid](#testgrid)
     - [Slack](#slack)
     - [Failure Handling (Jira Reporting)](#failure-handling-jira-reporting)
@@ -191,6 +192,12 @@ Please see the folder structure below as an example of the step registry folder 
 Each scenario should have at least one container image to execute the tests within the test repository. Please follow the [Container Creation Guide](../Containers/Container_Creation_Guide.md) for help. Please keep in mind, the `Dockerfile` for this image should live inside the test repository. Please see the [MTR scenario's Dockerfile](https://github.com/windup/windup-ui-tests/blob/main/dockerfiles/interop/Dockerfile) as an example.
 
 ### Reporting
+
+#### Component Readiness
+
+For onboarding into CR tooling (Sippy and CI Test Mapping), follow the [Component Readiness section in the Reporting Guide](../Reporting/Reporting_Guide.md#component-readiness). 
+
+For a multi-repository agent workflow (workspace setup, repo order, maintainer steps), see the [LP Interop CR agent playbook](../Reporting/LP_Interop_CR_Agent_Playbook.md).
 
 #### TestGrid
 
