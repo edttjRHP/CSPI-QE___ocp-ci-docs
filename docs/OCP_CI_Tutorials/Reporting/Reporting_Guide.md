@@ -184,7 +184,7 @@ This section explains how layered-product results appear in **[Component Readine
 ### General information
 
 - **LP Interop Component Readiness view:** The Layered Product (LP) Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
-  - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-right.
+  - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-right:
 
     ![Component Readiness View dropdown](https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215)
 
