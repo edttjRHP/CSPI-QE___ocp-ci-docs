@@ -209,8 +209,6 @@ Scenario failures are to be reported as bugs in Jira. The automation used to cre
 
 For onboarding into Component Readiness (CR), follow the [Component Readiness](../Reporting/Reporting_Guide.md#component-readiness) section in the Reporting Guide.
 
-For a multi-repository agent workflow (workspace setup, repo order, maintainer steps), see the [LP Interop CR agent playbook](../Reporting/LP_Interop_CR_Agent_Playbook.md).
-
 ### Ephemeral Cluster Guide
 
 Here we will discuss perhaps the biggest value of OpenShift CI which is the amount of supported flavors of OpenShift Installations.
