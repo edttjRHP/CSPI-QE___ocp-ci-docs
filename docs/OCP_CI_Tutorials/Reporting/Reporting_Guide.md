@@ -179,25 +179,25 @@ Please see [this PR](https://github.com/openshift/release/pull/39700/files) as a
 
 ## Component Readiness
 
-This section explains how layered-product results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** (CR) — A Sippy-based tool where LP Interop test historical health is tracked.
+This section explains how Layered Product (LP) results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** (CR) — A Sippy-based tool where LP Interop test historical health is tracked.
 
 ### General information
 
-- **LP Interop Component Readiness view:** The Layered Product (LP) Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
+- **LP Interop Component Readiness view:** The LP Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
   - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-right:
 
     ![Component Readiness View dropdown](https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215)
 
     Then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
   - **Where views are defined:** Supported releases and their view IDs are listed in Sippy’s [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries whose names end in `-LP-Interop`; that file is the source of truth when choosing a `view=` query for a given OCP release.
-  - **Release rotation:** When a new OpenShift minor ships, SHIP/TRT add the matching `<release>-LP-Interop` entry to `views.yaml` and Component Readiness moves its default spotlight forward. Layered-product teams do **not** need to request a brand-new Component Readiness view for every minor release.
+  - **Release rotation:** When a new OpenShift minor ships, SHIP/TRT add the matching `<release>-LP-Interop` entry to `views.yaml` and Component Readiness moves its default spotlight forward. Layered Product teams do **not** need to request a brand-new Component Readiness view for every minor release.
 - **Maintainers:** SHIP and TRT own this UI; contact `#forum-ocp-release-oversight` on Slack.
 
 For scenario configuration that satisfies CR at the job level (cron, workflows, environment variables, JUnit suite mapping), follow [Make a Job CR-Compliant](../Scenario_Development/Scenario_Development_Guide.md#make-a-job-cr-compliant) in the Scenario Development Guide.
 
 ### Sippy
 
-This document is a **checklist for coding agents** (and humans) adding support in [Sippy](https://github.com/openshift/sippy) for a new **MY-CMP** product that publishes CI under the layered-product / lp-interop pattern (mapped JUnit suite like `lp-ocp-compat--<lpProductName>`, Prow jobs under `…-lp-interop-…`).
+This document is a **checklist for coding agents** (and humans) adding support in [Sippy](https://github.com/openshift/sippy) for a new **MY-CMP** product that publishes CI under the layered product / lp-interop pattern (mapped JUnit suite like `lp-ocp-compat--<lpProductName>`, Prow jobs under `…-lp-interop-…`).
 
 ---
 
@@ -335,7 +335,7 @@ which rewrites `pkg/variantregistry/snapshot.yaml`.
 4. **`pkg/variantregistry/ocp_test.go`:** Add `TestVariantSyncer` case (recommended).
 5. **Maintainer:** Run **`make update-variants`** after variant changes.
 
-Replace `my-cmp`, `MyProduct`, and `lp-ocp-compat--MyProduct` with the actual layered-product variant slug and mapped suite string everywhere below (see prerequisites for suite generation in CI).
+Replace `my-cmp`, `MyProduct`, and `lp-ocp-compat--MyProduct` with the actual layered product variant slug and mapped suite string everywhere below (see prerequisites for suite generation in CI).
 
 ### CI Test Mapping
 
