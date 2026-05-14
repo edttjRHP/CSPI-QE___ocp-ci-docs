@@ -8,9 +8,6 @@
     - [Write the Scenario](#write-the-scenario)
     - [Build a Container Image to Execute Tests](#build-a-container-image-to-execute-tests)
   - [Reporting](#reporting)
-    - [Component Readiness](#component-readiness)
-    - [TestGrid](#testgrid)
-    - [Slack](#slack)
     - [TestGrid](#testgrid)
     - [Slack](#slack)
     - [Failure Handling (Jira Reporting)](#failure-handling-jira-reporting)
@@ -196,12 +193,6 @@ Each scenario should have at least one container image to execute the tests with
 
 ### Reporting
 
-#### Component Readiness
-
-For onboarding into Component Readiness (CR), follow the [Component Readiness](../Reporting/Reporting_Guide.md#component-readiness) section in the Reporting Guide.
-
-For a multi-repository agent workflow (workspace setup, repo order, maintainer steps), see the [LP Interop CR agent playbook](../Reporting/LP_Interop_CR_Agent_Playbook.md).
-
 #### TestGrid
 
 The majority (from what we can tell) of reporting in OpenShift CI is done through TestGrid. Luckily, the only thing we need to do to ensure this happens properly for our scenarios is include `-lp-interop` in the name of our configuration files (see step 3 of the [Getting Started](#getting-started) section above). This is covered for in depth in the [TestGrid section of the Reporting Guide](../Reporting/Reporting_Guide.md#testgrid)
@@ -213,6 +204,12 @@ The majority (from what we can tell) of reporting in OpenShift CI is done throug
 #### Failure Handling (Jira Reporting)
 
 Scenario failures are to be reported as bugs in Jira. The automation used to create the tickets for failures is smart enough to fairly-accurately determine why the failure happened and where to report it. For information on how to add this functionality and how it works, please see the [Reporting Guide](../Reporting/Reporting_Guide.md#failure-handling-jira).
+
+#### Component Readiness
+
+For onboarding into Component Readiness (CR), follow the [Component Readiness](../Reporting/Reporting_Guide.md#component-readiness) section in the Reporting Guide.
+
+For a multi-repository agent workflow (workspace setup, repo order, maintainer steps), see the [LP Interop CR agent playbook](../Reporting/LP_Interop_CR_Agent_Playbook.md).
 
 ### Ephemeral Cluster Guide
 
