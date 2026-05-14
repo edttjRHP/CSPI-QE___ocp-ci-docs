@@ -179,14 +179,16 @@ Please see [this PR](https://github.com/openshift/release/pull/39700/files) as a
 
 ## Component Readiness
 
-This section explains how layered-product results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** — the Sippy UI where LP interop health is tracked by OpenShift release and product.
+This section explains how layered-product results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** (CR) — A Sippy-based tool where LP Interop test historical health is tracked.
 
 For an **end-to-end, multi-repository workflow** (sanitized clones, branch discipline, maintainer hand-offs), see the [**LP Interop CR agent playbook**](LP_Interop_CR_Agent_Playbook.md).
 
 ### General information
 
-- **Interop Component Readiness view:** The layered-product interop view is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift minor version label Sippy expects for that stream (for example `4.22` → `4.22-LP-Interop`).
-  - Open [Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main) with `?view=<OCPRelease>-LP-Interop`, or follow a bookmark such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop) for OCP 4.22.
+- **LP Interop Component Readiness view:** The Layered Product (LP) Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
+  - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-right,
+<img width="243" height="154" alt="Image" src="https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215" />
+then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
   - **Where views are defined:** Supported releases and their view IDs are listed in Sippy’s [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries whose names end in `-LP-Interop`; that file is the source of truth when choosing a `view=` query for a given OCP release.
   - **Release rotation:** When a new OpenShift minor ships, SHIP/TRT add the matching `<release>-LP-Interop` entry to `views.yaml` and Component Readiness moves its default spotlight forward. Layered-product teams do **not** need to request a brand-new Component Readiness view for every minor release.
 - **Maintainers:** SHIP and TRT own this UI; contact `#forum-ocp-release-oversight` on Slack.
