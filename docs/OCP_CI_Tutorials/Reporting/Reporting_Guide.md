@@ -189,7 +189,7 @@ This section explains how Layered Product (LP) results appear in **[Component Re
 
     Then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
   - **Where views are defined:** Supported releases and their view IDs are listed in Sippy’s [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries with names ending in `-LP-Interop`; this file serves as the source of truth when selecting the correct `view=` query for a specific OCP release.
-  - **Release rotation:** When a new OpenShift minor ships, SHIP/TRT add the matching `<release>-LP-Interop` entry to `views.yaml` and Component Readiness moves its default spotlight forward. Layered Product teams do **not** need to request a brand-new Component Readiness view for every minor release.
+  - **Release rotation:** When a new OpenShift Minor Release is shipped, The Release Team (TRT) adds the matching `<ocpMinorRelease>-LP-Interop` entry to `config/views.yaml` automatically.
   - **Maintainers:** Sippy and CR are maintained by TRT. Use `#forum-ocp-release-oversight` on Slack to contact them.
 
 To properly configure the CI Operator configuration for a job so that it is parsed by CR correctly, please refer to [Make a Job CR-Compliant](../Scenario_Development/Scenario_Development_Guide.md#make-a-job-cr-compliant) in the Scenario Development Guide.
@@ -224,7 +224,7 @@ Do **not** run any `make` commands (or substitute commands) in this repository o
 
 **Slices:** **`testSuitePatterns`** (`[]*regexp.Regexp`) and **`testSuites`** (`[]string`)
 
-For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI emits is covered by a regex. Today upstream includes LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see [`testSuitePatterns` in `suites.go`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). Therefore **match the existing `^lp-ocp-compat--` pattern** and require **no new row** in **`testSuites`**.
+For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI emits is covered by a regex. Current upstream patterns already include LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see [`testSuitePatterns` in `suites.go`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). As long as your CI output follows the **`^lp-ocp-compat--` pattern**, no new entry is required in this file.
 
 - **New prefix family:** If CI introduces suite names that **do not** match any existing pattern, add **`regexp.MustCompile(...)`** to **`testSuitePatterns`** rather than enumerating literals.
 - **`testSuites` literals:** Still used for selected **legacy or non-regex** suite names (upstream examples include component-style entries such as `CNV-lp-interop`). Current onboarding routine does **not** touch this list.
