@@ -287,22 +287,11 @@ Use the **same string** as in `setLayeredProduct`’s `product` field. Keep the 
 
 ---
 
-#### 4. Tests and variant snapshot (do not run `make` here)
-
-##### 4a. Unit test (recommended)
-
-**File:** `pkg/variantregistry/ocp_test.go`
-**Test:** `TestVariantSyncer`
-
-Add a case with a **realistic** periodic job name for MY-CMP (including release and network tokens if needed) and assert `VariantPlatform`, `VariantLayeredProduct`, etc., match what `IdentifyVariants` returns.
-
-##### 4b. Variant snapshot
+#### 4. Make Variant Snapshot
 
 **Test:** `TestVariantsSnapshot` in `pkg/variantregistry/ocp_test.go` validates live variants for all jobs in `config/openshift.yaml` against a static baseline in **`pkg/variantregistry/snapshot.yaml`**.
 
 After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including `setLayeredProduct` / `setPlatform`), that snapshot **must** be regenerated or the test will fail.
-
-**Agents must not run `make`.** Have a maintainer run the command below **after** the Go changes are merged or applied locally:
 
 ```bash
 make update-variants
@@ -319,26 +308,12 @@ This process overwrites `pkg/variantregistry/snapshot.yaml` with the updated cla
 
 > **Note**: It is expected that snapshot tests will fail in CI until a maintainer has executed the `make update-variants` sync command.
 
----
-
-#### 6. What **not** to do
-
-- Do **not** run **`make`** (including `make update-variants`, `make`, `make test`, and so on) from automation; document the need for **`make update-variants`** when variant code changes.
-- Do **not** hand-edit **`snapshot.yaml`** without a documented, repo-approved process; prefer **`make update-variants`**.
-- Do **not** change unrelated views, suites, or variant patterns.
-- After frontend changes under `sippy-ng`, this onboarding path does not require npm; when JavaScript is modified, follow `AGENTS.md` (eslint/prettier) separately.
-
----
-
 #### Summary checklist
 
 1. **`pkg/db/suites.go`:** Confirm **`testSuitePatterns`** covers your JUnit suite prefixes (upstream LP defaults include `^lp-ocp-compat--`, `^lp-interop--`, `^lp-chaos--`); add **`regexp.MustCompile`** only if CI uses a **new** prefix. Do **not** add per-product suite literals to **`testSuites`** for standard mapped names.
 2. **`pkg/variantregistry/ocp.go`:** Add `setLayeredProduct` periodic-name substring → **`LayeredProduct`** (example **`lp-interop-my-cmp`**).
 3. **`config/views.yaml`:** Add `lp-interop-my-cmp` to `*-LP-Interop` views’ `LayeredProduct`.
-4. **`pkg/variantregistry/ocp_test.go`:** Add `TestVariantSyncer` case (recommended).
-5. **Maintainer:** Run **`make update-variants`** after variant changes.
-
-Replace `my-cmp`, `MyProduct`, and `lp-ocp-compat--MyProduct` with the actual layered product variant slug and mapped suite string everywhere below (see prerequisites for suite generation in CI).
+4. Run **`make update-variants`** after variant changes.
 
 ### CI Test Mapping
 
