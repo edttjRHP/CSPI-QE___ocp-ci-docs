@@ -38,7 +38,9 @@ As you may have read in other documents in this repository, you will need to app
 
 - `ci-operator/config/windup/winup-ui-tests/windup-windup-ui-tests-main-lp-interop.yaml`: Will be reported because `-lp-interop` is in the filename.
 - `ci-operator/config/windup/winup-ui-tests/windup-windup-ui-tests-main.yaml`: Will NOT get reported because `-lp-interop` is not found in the filename.
-- `ci-operator/config/windup/winup-ui-tests/windup-windup-ui-tests-main__ocp412-mtr-123-lp-interop.yaml`: Will be reported because `-lp-interop` is found in the filename.
+- `ci-operator/config/windup/windup-ui-tests/windup-windup-ui-tests-main-lp-interop.yaml`: Will be reported because `-lp-interop` is in the filename.
+- `ci-operator/config/windup/windup-ui-tests/windup-windup-ui-tests-main.yaml`: Will NOT get reported because `-lp-interop` is not found in the filename.
+- `ci-operator/config/windup/windup-ui-tests/windup-windup-ui-tests-main__ocp412-mtr-123-lp-interop.yaml`: Will be reported because `-lp-interop` is found in the filename.
 
 ### TestGrid Dashboard Creation and Modification Automation
 
@@ -189,11 +191,11 @@ This section explains how Layered Product (LP) results appear in **[Component Re
     ![Component Readiness View dropdown](https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215)
 
     Then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
-  - **Where views are defined:** Supported releases and their view IDs are listed in Sippy’s [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries whose names end in `-LP-Interop`; that file is the source of truth when choosing a `view=` query for a given OCP release.
+  - **Where views are defined:** Supported releases and their view IDs are listed in Sippy’s [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries with names ending in `-LP-Interop`; this file serves as the source of truth when selecting the correct `view=` query for a specific OCP release.
   - **Release rotation:** When a new OpenShift minor ships, SHIP/TRT add the matching `<release>-LP-Interop` entry to `views.yaml` and Component Readiness moves its default spotlight forward. Layered Product teams do **not** need to request a brand-new Component Readiness view for every minor release.
-- **Maintainers:** SHIP and TRT own this UI; contact `#forum-ocp-release-oversight` on Slack.
+  - **Maintainers:** Sippy and CR are maintained by TRT. Use `#forum-ocp-release-oversight` on Slack to contact them.
 
-For scenario configuration that satisfies CR at the job level (cron, workflows, environment variables, JUnit suite mapping), follow [Make a Job CR-Compliant](../Scenario_Development/Scenario_Development_Guide.md#make-a-job-cr-compliant) in the Scenario Development Guide.
+To properly configure the CI Operator configuration for a job so that it is parsed by CR correctly, please refer to [Make a Job CR-Compliant](../Scenario_Development/Scenario_Development_Guide.md#make-a-job-cr-compliant) in the Scenario Development Guide.
 
 ### Sippy
 
@@ -203,7 +205,7 @@ This document is a **checklist for coding agents** (and humans) adding support i
 
 #### Prerequisites: gather required information
 
-Within the `openshift/release` repository, under CI Configuration files (`ci-operator/config/**/*.yaml`), confirm:
+Within the `openshift/release` repository, under CI Configuration files (`ci-operator/config/**/*.yaml`), confirm the following:
 
 1. **Mapped JUnit suite string** as CI emits it in imported JUnit from Prow. See [Map the JUnit tests output](../Scenario_Development/Scenario_Development_Guide.md#map-the-junit-tests-output) in the Scenario Development Guide for how CI produces that mapping.
 
@@ -296,7 +298,7 @@ Add a case with a **realistic** periodic job name for MY-CMP (including release 
 
 ##### 4b. Variant snapshot
 
-**Test:** `TestVariantsSnapshot` in `pkg/variantregistry/ocp_test.go` compares live variants for all jobs in `config/openshift.yaml` against **`pkg/variantregistry/snapshot.yaml`**.
+**Test:** `TestVariantsSnapshot` in `pkg/variantregistry/ocp_test.go` validates live variants for all jobs in `config/openshift.yaml` against a static baseline in **`pkg/variantregistry/snapshot.yaml`**.
 
 After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including `setLayeredProduct` / `setPlatform`), that snapshot **must** be regenerated or the test will fail.
 
@@ -306,13 +308,14 @@ After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including
 make update-variants
 ```
 
-That target builds `./sippy` and runs:
+What this command does:
+It compiles the ./sippy binary and executes a snapshot refresh:
 
 ```bash
 ./sippy variants snapshot --config ./config/openshift.yaml
 ```
 
-which rewrites `pkg/variantregistry/snapshot.yaml`.
+This process overwrites `pkg/variantregistry/snapshot.yaml` with the updated classification data.
 
 > Expect snapshot tests to fail until `make update-variants` has been run by a maintainer.
 
