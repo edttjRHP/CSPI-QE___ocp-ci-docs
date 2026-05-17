@@ -199,7 +199,7 @@ To properly configure the CI Operator configuration for a job so that it is pars
 
 ### Sippy
 
-This document is a **checklist for coding agents** (and humans) adding support in [Sippy](https://github.com/openshift/sippy) for a new **MY-CMP** product that publishes CI under the layered product / lp-interop pattern (mapped JUnit suite like `lp-ocp-compat--<lpProductName>`, Prow jobs under `…-lp-interop-…`).
+This document is a **checklist for coding agents** (and humans) adding support in [Sippy](https://github.com/openshift/sippy) for a new product that publishes CI under the layered product / lp-interop pattern (mapped JUnit suite like `lp-ocp-compat--<lpProductName>`, Prow jobs under `…-lp-interop-…`).
 
 ---
 
@@ -317,7 +317,7 @@ It compiles the ./sippy binary and executes a snapshot refresh:
 
 This process overwrites `pkg/variantregistry/snapshot.yaml` with the updated classification data.
 
-> Expect snapshot tests to fail until `make update-variants` has been run by a maintainer.
+> **Note**: It is expected that snapshot tests will fail in CI until a maintainer has executed the `make update-variants` sync command.
 
 ---
 
