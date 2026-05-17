@@ -239,7 +239,7 @@ Suites that match **neither** patterns **nor** the explicit list are **not** imp
 **File:** `pkg/variantregistry/ocp.go`
 **Function:** `setLayeredProduct`
 
-In `setLayeredProduct`, append a row to the job-name substring → `LayeredProduct` mapping table:
+In the `setLayeredProduct` function, append a new row to the mapping table that links the Openshift Ci periodic job name substrings to the corresponding `LayeredProduct` variant:
 
 ```go
 {"-lp-interop-cr-my-cmp", "lp-interop-my-cmp"},
@@ -253,7 +253,8 @@ In `setLayeredProduct`, append a row to the job-name substring → `LayeredProdu
 
 > **WARNING** (`pkg/variantregistry/ocp.go`, `setLayeredProduct`)
 >
-> That mapping table is evaluated in **slice order**: the **first** substring match wins, and later rows are ignored for that job. Do **not** append an LP-specific row **below** a broader row that can still match the same periodic name, for example `{"-virt", "virt"}` vs. `{"-lp-interop-cnv", "virt"}` and similar catch-alls. Misordering silently misclassifies jobs in Component Readiness. Keep narrow lp-interop rows **above** generic mappings.
+> Because the mapping table is evaluated in **slice order**, the first successful substring match stops further evaluation for that job (next rows are ignored). 
+> Do not append a specific LP row below a broader row that could match the same name (e.g., placing `{"-lp-interop-cnv", "virt"}` below a generic `{"-virt", "virt"}`). Misordering results in jobs being "swallowed" by generic categories, causes them to be misclassified and corresponds to the wrong component in the Component Readiness Interop dashboard.
 
 **Optional (IBM / on-prem style job names):** When jobs include `-ibm` / `-ibmcloud` and those jobs should appear alongside bare metal in platform filtering, confirm `setPlatform` includes the `{"-ibm", "metal"}` mapping (or add it if the branch lacks it). That step is **independent** of lp-interop onboarding but determines whether the **Platform** filter lists those jobs.
 
