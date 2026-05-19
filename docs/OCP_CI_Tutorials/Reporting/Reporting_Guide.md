@@ -192,7 +192,7 @@ This section explains how layered-product results appear in **[Component Readine
     Then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
   - **Where views are defined:** Supported releases and their view IDs are listed in Sippy's [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries with names ending in `-LP-Interop`; this file serves as the source of truth when selecting the correct `view=` query for a specific OCP release.
   - **Release rotation:** When a new OpenShift Minor Release is shipped, the Release Team (TRT) adds the matching `<ocpMinorRelease>-LP-Interop` entry to `config/views.yaml` automatically.
-  - **Maintainers:** Sippy and CR are maintained by TRT. Use `#forum-ocp-release-oversight` on Slack to contact them.
+- **Maintainers:** Sippy and CR are maintained by TRT. Use `#forum-ocp-release-oversight` on Slack to contact them.
 
 To properly configure the CI Operator configuration for a CI Operator Job so that it is parsed by CR correctly, please refer to [Make a Job CR-Compliant](../Scenario_Development/Scenario_Development_Guide.md#make-a-job-cr-compliant) in the Scenario Development Guide.
 
@@ -206,11 +206,7 @@ This checklist covers the changes required in [Sippy](https://github.com/openshi
 
 1. **JUnit Test Suite (TS) name prefix**: Identify the TS name prefix in the JUnit results produced by the CI Operator Job. See [Map the JUnit tests output](../Scenario_Development/Scenario_Development_Guide.md#map-the-junit-tests-output) in the Scenario Development Guide on how to add the prefix if the actual tests do not produce a TS with a consistent prefix.
 
-   - Often `lp-ocp-compat--<lpProductName>`, e.g. `lp-ocp-compat--OpenshiftPipelines`. See [Allow importing tests](#1-allow-importing-tests-pkgdbsuitesgo) below for how Sippy accepts suites via **`testSuitePatterns`**.
-
-2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Configuration files (`ci-operator/jobs/**/*.yaml`), identify a stable substring present in all periodic CI Operator Job names (e.g. `-lp-interop-cr-my-comp`). The variant registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins).
-
-   - If **multiple** patterns are required (e.g., `-lp-interop-cr-acs` and `-lp-interop-cr-acs-latest`), add **separate** rows, ensuring the **more specific patterns precede the more general ones**.
+2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Configuration files (`ci-operator/jobs/**/*.yaml`), identify a stable substring present in all periodic CI Operator Job names (e.g. `-lp-interop-cr-my-comp`). The variant registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins). 
 
 ---
 
@@ -245,6 +241,7 @@ In the `setLayeredProduct` function, append a new row to the mapping table that 
 
 - **`product` value:** always use the **`lp-interop-…`** form (lowercase, hyphenated), e.g. `lp-interop-my-comp`. This is what Component Readiness views filter on.
 - **`substring`:** must appear in real periodic CI Operator Job names after lowercasing. Align with CI naming (often `-lp-interop-cr-my-comp`).
+  - Additionally, if **multiple** branches are required for the same product, **the more specific patterns** should be preferred over the more general patterns (e.g., `-lp-interop-cr-acs` and `-lp-interop-cr-acs-latest`).
 - **Order matters:** the slice is scanned **top to bottom**; the **first** match wins. Place **narrow** patterns (e.g. product-specific) **above** broad patterns so LP Interop CI Operator Jobs are not misclassified.
 
 > **WARNING** (`pkg/variantregistry/ocp.go`, `setLayeredProduct`)
