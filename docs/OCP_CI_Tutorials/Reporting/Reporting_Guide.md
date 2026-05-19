@@ -206,7 +206,7 @@ This checklist covers the changes required in [Sippy](https://github.com/openshi
 
 1. **JUnit Test Suite (TS) name prefix**: Identify the TS name prefix in the JUnit results produced by the CI Operator Job. See [Map the JUnit tests output](../Scenario_Development/Scenario_Development_Guide.md#map-the-junit-tests-output) in the Scenario Development Guide on how to add the prefix if the actual tests do not produce a TS with a consistent prefix.
 
-2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Configuration files (`ci-operator/jobs/**/*.yaml`), identify a stable substring present in all periodic CI Operator Job names (e.g. `-lp-interop-cr-my-comp`). The variant registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins). 
+2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Jobs `periodics` files (`ci-operator/jobs/**/*-periodics.yaml`), identify a stable substring present in the relevant `periodics[].name` value (e.g. `-lp-interop-cr-my-comp`). The CR Variant Registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins). 
 
 ---
 
