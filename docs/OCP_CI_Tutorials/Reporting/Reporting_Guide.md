@@ -79,7 +79,6 @@ To add support for automatically detecting layered product interoperability CI O
 ```
 
 4. Commit your changes and open a Pull Request.
-5. **Verification:** To confirm the Slack alert is wired up correctly before the Pull Request is merged, request a CI Operator Job rehearsal using `/pj-rehearse <job-name>` in the Pull Request and verify the Slack notification arrives in the target channel.
 
 > **IMPORTANT**
 >
@@ -188,7 +187,7 @@ This section explains how layered-product results appear in **[Component Readine
 - **LP Interop Component Readiness view:** The Layered Product (LP) Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
   - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-left:
 
-    ![Component Readiness View dropdown](https://github.com/user-attachments/assets/389b4864-aada-4aed-a1d2-b7624e750e1d)
+    ![Component Readiness View dropdown](https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215)
 
     Then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
   - **Where views are defined:** Supported releases and their view IDs are listed in Sippy's [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries with names ending in `-LP-Interop`; this file serves as the source of truth when selecting the correct `view=` query for a specific OCP release.
@@ -209,11 +208,9 @@ This checklist covers the changes required in [Sippy](https://github.com/openshi
 
    - Often `lp-ocp-compat--<lpProductName>`, e.g. `lp-ocp-compat--OpenshiftPipelines`. See [Allow importing tests](#1-allow-importing-tests-pkgdbsuitesgo) below for how Sippy accepts suites via **`testSuitePatterns`**.
 
-2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Configuration files (`ci-operator/config/**/*.yaml`), identify a stable substring present in all periodic CI Operator Job names (e.g. `-lp-interop-cr-my-comp`). The variant registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins).
+2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Configuration files (`ci-operator/jobs/**/*.yaml`), identify a stable substring present in all periodic CI Operator Job names (e.g. `-lp-interop-cr-my-comp`). The variant registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins).
 
    - If **multiple** patterns are required (e.g., `-lp-interop-cr-acs` and `-lp-interop-cr-acs-latest`), add **separate** rows, ensuring the **more specific patterns precede the more general ones**.
-
-> **Note:** Do not run any `make` commands when implementing these steps. A maintainer must run them locally when noted below; document that requirement when submitting your Pull Request.
 
 ---
 
@@ -238,7 +235,7 @@ Suites that match **neither** patterns **nor** the explicit list are **not** imp
 **File:** `pkg/variantregistry/ocp.go`
 **Function:** `setLayeredProduct`
 
-In the `setLayeredProduct` function, append a new row to the mapping table that links CI Operator Job-name substrings to the corresponding `LayeredProduct` variant:
+In the `setLayeredProduct` function, append a new row to the mapping table that links CI Operator Job periodic name substrings to the corresponding `LayeredProduct` variant:
 
 ```go
 {"-lp-interop-cr-my-comp", "lp-interop-my-comp"},
@@ -290,8 +287,7 @@ Use the **same string** as in `setLayeredProduct`'s `product` field. Keep the li
 
 After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including `setLayeredProduct` / `setPlatform`), that snapshot **must** be regenerated or the test will fail.
 
-Have a maintainer run the command below **after** the Go changes are merged or applied locally:
-
+Run the command below **after** the Go changes are merged or applied locally:
 ```bash
 make update-variants
 ```
@@ -305,14 +301,14 @@ What this command does: it compiles the `./sippy` binary and executes a snapshot
 This process overwrites `pkg/variantregistry/snapshot.yaml` with the updated classification data.
 
 > [!NOTE]
-> It is expected that snapshot tests will fail in CI until a maintainer has executed the `make update-variants` sync command.
+> It is expected that snapshot tests will fail in CI until the execution of the `make update-variants` sync command.
 
 #### Summary checklist
 
 1. **`pkg/db/suites.go`:** Confirm **`testSuitePatterns`** covers your JUnit suite prefixes (upstream LP defaults include `^lp-ocp-compat--`, `^lp-interop--`, `^lp-chaos--`); add **`regexp.MustCompile`** only if CI uses a **new** prefix. Do **not** add per-product suite literals to **`testSuites`** for standard mapped names.
 2. **`pkg/variantregistry/ocp.go`:** Add `setLayeredProduct` CI Operator Job-name substring to **`LayeredProduct`** (example **`lp-interop-my-comp`**). Place narrow patterns above broad ones.
 3. **`config/views.yaml`:** Add `lp-interop-my-comp` to `*-LP-Interop` views' `LayeredProduct`.
-4. **Maintainer:** Run **`make update-variants`** after variant changes.
+4. Run **`make update-variants`** after variant changes.
 
 ### CI Test Mapping
 
@@ -336,8 +332,6 @@ pattern: strip `-lp-interop` and join words).
 
    - Verify components with `./ci-test-mapping jira-verify` as described in the root [README.md](../../README.md#updating-jira-components).
    - Registered components can be found at [OCPBUGS components](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components).
-
-> **Note:** Do not run any `make` targets when implementing these steps. After editing `config/openshift-eng.yaml` or component code, **mapping regeneration is required** before merge: maintainers must run **`make mapping`** (see **Updating Mappings** in the root [README.md](../../README.md#updating-mappings)). Record that requirement explicitly when submitting changes. Reviewers should inspect the resulting `data/` diff before merging.
 
 ---
 
@@ -437,7 +431,7 @@ The string passed to `Register` is the **component name** used in mappings; it m
 
 #### 4. Validate and ship
 
-1. Regenerate committed mapping data: after changing config or components, maintainers must run `make mapping` (see **Updating Mappings** in the root [README.md](../../README.md#updating-mappings)).
+1. Regenerate committed mapping data: after changing config or components, run `make mapping`.
 2. Do not execute `make` as part of implementing these steps; flag that this step is mandatory before merge.
 
 ---
@@ -449,4 +443,4 @@ The string passed to `Register` is the **component name** used in mappings; it m
 3. **`pkg/components/myproductlpinterop/capabilities.go`:** `identifyCapabilities` + `util.DefaultCapabilities` (see [myproductlpinterop/capabilities.go](../../pkg/components/myproductlpinterop/capabilities.go)).
 4. **`pkg/registry/registry.go`:** Import package + `r.Register(...)`.
 5. **Jira / verification:** `DefaultJiraComponent` exists; `./ci-test-mapping jira-verify` clean.
-6. **Maintainer:** Run **`make mapping`** (required before merge).
+6. Run **`make mapping`** (required before merge).
