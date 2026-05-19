@@ -285,6 +285,7 @@ Use the **same string** as in `setLayeredProduct`'s `product` field. Keep the li
 After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including `setLayeredProduct` / `setPlatform`), that snapshot **must** be regenerated or the test will fail.
 
 Run the command below **after** the Go changes are merged or applied locally:
+
 ```bash
 make update-variants
 ```
