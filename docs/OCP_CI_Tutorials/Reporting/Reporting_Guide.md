@@ -212,11 +212,11 @@ This checklist covers the changes required in [Sippy](https://github.com/openshi
 
 #### 1. Allow importing tests: `pkg/db/suites.go`
 
-**File:** [`pkg/db/suites.go`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go)
+**File:** [pkg/db/suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go)
 
 **Slices:** **`testSuitePatterns`** (`[]*regexp.Regexp`) and **`testSuites`** (`[]string`)
 
-For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI produces is covered by a regex. Current upstream patterns already include LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see [`testSuitePatterns` in `suites.go`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). As long as your CI output follows the **`^lp-ocp-compat--` pattern**, no new entry is required in this file.
+For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI produces is covered by a regex. Current upstream patterns already include LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see `testSuitePatterns` in [suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). As long as your CI output follows the `^lp-ocp-compat--` pattern, no new entry is required in this file.
 
 - **New prefix family:** If CI introduces suite names that **do not** match any existing pattern, add **`regexp.MustCompile(...)`** to **`testSuitePatterns`** rather than enumerating literals.
 - **`testSuites` literals:** Still used for selected **legacy or non-regex** suite names (upstream examples include component-style entries such as `CNV-lp-interop`). Current onboarding routine does **not** touch this list.
