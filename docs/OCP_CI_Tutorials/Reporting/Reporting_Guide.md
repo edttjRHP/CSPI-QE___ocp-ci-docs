@@ -180,11 +180,11 @@ Please see [this PR](https://github.com/openshift/release/pull/39700/files) as a
 
 ## Component Readiness
 
-This section explains how layered-product results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** (CR), a Sippy-based tool where LP Interop test historical health is tracked.
+This section explains how Layered Product (LP) CI Operator Job run results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** (CR), a Sippy-based tool where LP Interop test historical health is tracked.
 
 ### General information
 
-- **LP Interop Component Readiness view:** The Layered Product (LP) Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
+- **LP Interop Component Readiness view:** The LP Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
   - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-left:
 
     ![Component Readiness View dropdown](https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215)
@@ -219,7 +219,6 @@ This checklist covers the changes required in [Sippy](https://github.com/openshi
 For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI produces is covered by a regex. Current upstream patterns already include LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see `testSuitePatterns` in [suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). As long as your CI output follows the `^lp-ocp-compat--` pattern, no new entry is required in this file.
 
 - **New prefix family:** If CI introduces suite names that **do not** match any existing pattern, add **`regexp.MustCompile(...)`** to **`testSuitePatterns`** rather than enumerating literals.
-- **`testSuites` literals:** Still used for selected **legacy or non-regex** suite names (upstream examples include component-style entries such as `CNV-lp-interop`). Current onboarding routine does **not** touch this list.
 - **ci-test-mapping:** Keep **`Matchers`** (**`Suite`** / **`SuiteRegEx`**) aligned with the suite strings CI actually produces; Sippy import coverage is via **`testSuitePatterns`**, not by duplicating every suite string in **`testSuites`**.
 
 Suites that match **neither** patterns **nor** the explicit list are **not** imported into Sippy's DB.
@@ -242,7 +241,7 @@ In the `setLayeredProduct` function, append a new row to the mapping table that 
 - **`product` value:** always use the **`lp-interop-…`** form (lowercase, hyphenated), e.g. `lp-interop-my-comp`. This is what Component Readiness views filter on.
 - **`substring`:** must appear in real periodic CI Operator Job names after lowercasing. Align with CI naming (often `-lp-interop-cr-my-comp`).
   - Additionally, if **multiple** branches are required for the same product, **the more specific patterns** should be preferred over the more general patterns (e.g., `-lp-interop-cr-acs` and `-lp-interop-cr-acs-latest`).
-- **Order matters:** the slice is scanned **top to bottom**; the **first** match wins. Place **narrow** patterns (e.g. product-specific) **above** broad patterns so LP Interop CI Operator Jobs are not misclassified.
+- **Order matters:** the slice is scanned top to bottom; the **first** match wins. Place narrower patterns (e.g. product-specific) above broader patterns.
 
 > **WARNING** (`pkg/variantregistry/ocp.go`, `setLayeredProduct`)
 >
@@ -278,23 +277,14 @@ Use the **same string** as in `setLayeredProduct`'s `product` field. Keep the li
 
 ---
 
-#### 4. Make Variant Snapshot
+#### 4. Update Variant Snapshot
 
 **Test:** `TestVariantsSnapshot` in `pkg/variantregistry/ocp_test.go` validates live variants for all CI Operator Jobs in `config/openshift.yaml` against a static baseline in **`pkg/variantregistry/snapshot.yaml`**.
 
 After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including `setLayeredProduct` / `setPlatform`), that snapshot **must** be regenerated or the test will fail.
 
-Run the command below **after** the Go changes are merged or applied locally:
+Run the command below **after** all the above changes has been applied:
 
-```bash
-make update-variants
-```
-
-What this command does: it compiles the `./sippy` binary and executes a snapshot refresh:
-
-```bash
-./sippy variants snapshot --config ./config/openshift.yaml
-```
 
 This process overwrites `pkg/variantregistry/snapshot.yaml` with the updated classification data.
 
