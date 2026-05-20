@@ -214,7 +214,7 @@ This checklist covers the changes required in [Sippy](https://github.com/openshi
 
 **File:** [pkg/db/suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go)
 
-**Slices:** **`testSuitePatterns`** (`[]*regexp.Regexp`) and **`testSuites`** (`[]string`)
+**Variable:** **`testSuitePatterns`** (`[]*regexp.Regexp`)
 
 For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI produces is covered by a regex. Current upstream patterns already include LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see `testSuitePatterns` in [suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). As long as your CI output follows the `^lp-ocp-compat--` pattern, no new entry is required in this file.
 
@@ -248,8 +248,6 @@ In the `setLayeredProduct` function, append a new row to the mapping table that 
 > Because the mapping table is evaluated in **slice order**, the first successful substring match stops further evaluation for that CI Operator Job (next rows are ignored).
 > Do not append a specific LP row below a broader row that could match the same name (e.g., placing `{"-lp-interop-cnv", "virt"}` below a generic `{"-virt", "virt"}`). Misordering results in CI Operator Jobs being "swallowed" by generic categories, causes them to be misclassified and correspond to the wrong component in the Component Readiness interop dashboard.
 
-**Optional (IBM / on-prem style CI Operator Job names):** When CI Operator Jobs include `-ibm` / `-ibmcloud` and those CI Operator Jobs should appear alongside bare metal in platform filtering, confirm `setPlatform` includes the `{"-ibm", "metal"}` mapping (or add it if the branch lacks it). That step is **independent** of lp-interop onboarding but determines whether the **Platform** filter lists those CI Operator Jobs.
-
 ---
 
 #### 3. Include the product in LP-Interop views: `config/views.yaml`
@@ -273,15 +271,11 @@ add:
 
 Use the **same string** as in `setLayeredProduct`'s `product` field. Keep the list **alphabetically sorted** unless the file already uses a different convention for that block.
 
-**Note:** Some older views (for example certain `4.20-*` LP views) list only a subset of products. Add the product entry only alongside blocks where other `lp-interop-*` products already appear.
-
 ---
 
 #### 4. Update Variant Snapshot
 
 **Test:** `TestVariantsSnapshot` in `pkg/variantregistry/ocp_test.go` validates live variants for all CI Operator Jobs in `config/openshift.yaml` against a static baseline in **`pkg/variantregistry/snapshot.yaml`**.
-
-After **any** change to variant logic in `pkg/variantregistry/ocp.go` (including `setLayeredProduct` / `setPlatform`), that snapshot **must** be regenerated or the test will fail.
 
 Run the command below **after** all the above changes has been applied:
 
