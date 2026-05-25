@@ -13,9 +13,13 @@
     - [Example](#example)
   - [How To Add Jira Reporting to a Scenario](#how-to-add-jira-reporting-to-a-scenario)
 - [Component Readiness](#component-readiness)
+  - [Summary](#summary)
+  - [Prerequisites](#prerequisites)
   - [General Information](#general-information)
   - [Sippy](#sippy)
   - [CI Test Mapping](#ci-test-mapping)
+  - [CI Operator Job Configuration](#ci-operator-job-configuration)
+  - [Verification](#verification)
 
 ## TestGrid
 
@@ -139,7 +143,7 @@ flowchart TD
   comment(Comment on duplicate bug with failure information)
 
   failure --> type
-  type --> 
+  type -->
   rule --> matches & no_match
   matches --> a(Does a duplicate bug exist?) --> d(No) & c(Yes)
   no_match --> b(Does a duplicate bug exist?) --> f(No) & c
@@ -180,225 +184,521 @@ Please see [this PR](https://github.com/openshift/release/pull/39700/files) as a
 
 ## Component Readiness
 
-This section explains how Layered Product (LP) CI Operator Job run results appear in **[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main)** (CR), a Sippy-based tool where LP Interop test historical health is tracked.
+[Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main) (CR) is a dashboard within
+[Sippy](https://sippy.dptools.openshift.org/sippy-ng/) that tracks historical test health across OpenShift CI runs. CR surfaces regressions by comparing a
+sample Release window against a baseline, broken down by variant (platform, network, architecture, and Layered Product (LP)). LP is any Red Hat product that is
+tested for compatibility with OpenShift. CI Operator Job run results for LP-OCP Compatibility Test Suites (TS) appear in CR once the job is registered in both
+[openshift/sippy](https://github.com/openshift/sippy/) and [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping). Individual Test
+Cases (TC) that appear within those TSs are mapped to CR Components and Capabilities by `ci-test-mapping`.
 
-### General information
+### Summary
 
-- **LP Interop Component Readiness view:** The LP Interop Dashboard View is named `<OCPRelease>-LP-Interop`, where `<OCPRelease>` is the OpenShift Minor Release the LPs are installed on (Sippy groups the Dashboard View based on the OpenShift Core Platform (OCP) y-stream releases). For example, `OCP 4.22` based LPs will have Dashboard View named as `4.22-LP-Interop`.
-  - Open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main), and click `View` on the top-left:
+Onboarding an LP OCP Compatibility (LP OCP Compat) Job into CR requires three pull requests (PR):
+| PR Target Repo                                                                    | Files Changed                                                                                                                                                             |
+|-----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [openshift/release](https://github.com/openshift/release)                         | CI Operator Job Conf. files under `ci-operator/config/`                                                                                                                   |
+| [openshift/sippy](https://github.com/openshift/sippy)                             | `pkg/db/suites.go` (if needed), `pkg/variantregistry/ocp.go`, `config/views.yaml`, `pkg/variantregistry/snapshot.yaml`                                                    |
+| [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping) | `config/openshift-eng.yaml`, `pkg/components/<lpComp>/component.go`, `pkg/components/<lpComp>/capabilities.go`, `pkg/registry/registry.go`, regenerated `mapping.json`    |
 
-    ![Component Readiness View dropdown](https://github.com/user-attachments/assets/9ea6300d-fada-4cf3-a612-74dcc60fa215)
+The three PRs are independent of each other and can be opened in parallel. The Sippy and ci-test-mapping PRs both depend on the CI Operator Job already being
+CR-compliant and producing JUnit XML with the correct TS name prefix (see [Prerequisites](#prerequisites)). Do not open the Sippy or ci-test-mapping PR until
+the job is confirmed to be producing the expected JUnit output. All three must be merged before LP test results appear correctly in CR. For an example, see
+[pkg/components/quaylpinterop/](https://github.com/openshift-eng/ci-test-mapping/tree/main/pkg/components/quaylpinterop/) in `ci-test-mapping`.
 
-    Then select the desired Dashboard View `<OCPRelease>-LP-Interop`, or use a direct URL, such as [4.22-LP-Interop](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-Interop).
-  - **Where views are defined:** Supported releases and their view IDs are listed in Sippy's [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml). Search for `component_readiness` entries with names ending in `-LP-Interop`; this file serves as the source of truth when selecting the correct `view=` query for a specific OCP release.
-  - **Release rotation:** When a new OpenShift Minor Release is shipped, the Release Team (TRT) adds the matching `<ocpMinorRelease>-LP-Interop` entry to `config/views.yaml` automatically.
-- **Maintainers:** Sippy and CR are maintained by TRT. Use `#forum-ocp-release-oversight` on Slack to contact them.
+### Prerequisites
 
-To properly configure the CI Operator configuration for a CI Operator Job so that it is parsed by CR correctly, please refer to [Make a Job CR-Compliant](../Scenario_Development/Scenario_Development_Guide.md#make-a-job-cr-compliant) in the Scenario Development Guide.
+Complete the following before opening the Sippy or ci-test-mapping PR.
+
+ 1. **Make the CI Operator Job CR-compliant.** This is a hard prerequisite; neither the Sippy PR nor the ci-test-mapping PR will be effective without it. CI
+    Operator Job Conf. is documented in the [CI Operator Job Configuration](#ci-operator-job-configuration) section. The job must produce JUnit XML with the
+    `DR__RP__CR_COMP_NAME` value (`lp-ocp-compat--<lpName>`) as the `<testsuite name="...">` attribute.
+
+    To verify: JUnit XML files from a CI Operator Job Run are in the Prow Job Artifacts directory, accessible via the "Artifacts" link on the Prow Job page (a
+    Prow Job page is the web UI page for a single CI Operator Job Run, accessible from [prow.ci.openshift.org](https://prow.ci.openshift.org) by searching for
+    the job name or via a link in a GitHub Pull Request's CI Status Checks; each run page shows an "Artifacts" link that leads to a browsable artifact
+    directory tree, with JUnit XML files located under the sub-directory for the Test Step, for example, `artifacts/<jobShortName>/<stepName>/artifacts/`).
+    Open the JUnit XML files and confirm that each `<testsuite name="...">` begins with the expected `lp-ocp-compat--<lpName>` prefix.
+
+ 2. Have the LP name and the [`OCPBUGS`](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) Jira Component name ready before proceeding.
+    The Jira Component name should follow the pattern `LP--<lpName>` (for example, `LP--my-product`); this value is used as `.Component.DefaultJiraComponent`
+    in `pkg/components/<lpComp>/component.go`.
+
+### General Information
+
+**LP OCP Compat Dashboard Views:** CR organizes results into named Views. LP OCP Compat Dashboard Views for a given OpenShift Release follow the naming pattern
+`<ocpRelease>-LP-OCP-Compat--<lpVer>`, where `<ocpRelease>` is the OpenShift y-stream Minor Release (for example, `4.22`) on which the LP is installed, and
+`<lpVer>` indicates the LP version being tested (`lpGA` for LP General Availability (GA) versions, `lpMainline` for LP mainline versions, or a specific version
+such as `lp1.2` for LP version 1.2). For example, the LP OCP Compat View for OCP 4.22-based LP GA testing is named `4.22-LP-OCP-Compat--lpGA`. Additional View
+families exist: `<ocpRelease>-LP-Chaos--lpMainline` (LP chaos testing) and `<ocpRelease>-LP-Interop--lpMainline` (LP interop testing). For LP OCP Compat
+onboarding the relevant Views are `*-LP-OCP-Compat--lpGA` (most LPs) and `*-LP-OCP-Compat--lpMainline` (LPs that test against their own mainline version).
+
+To navigate to a View, open [CR](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main) and click `View` in the top-left corner:
+
+![Component Readiness View dropdown](img/CRdash--ViewSelector.png)
+
+Select the desired View from the list, or use a direct URL with the `view=` query parameter, such as
+[4.22-LP-OCP-Compat--lpGA](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-OCP-Compat--lpGA).
+
+**Where Views are defined:** Supported Releases and their View identifiers are listed in
+[config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml) in the Sippy repository. Entries with names matching `*-LP-OCP-Compat--*`
+define the LP OCP Compat Dashboard Views; this file is the source of truth for the correct `view=` value for a given OCP Release.
+
+**Maintainers:** Sippy and CR are maintained by the Technical Release Team (TRT). The `#forum-ocp-release-oversight` Slack channel is the point of contact for
+Sippy and CR questions.
+
+**Release rotation:** When a new OpenShift Minor Release reaches GA, TRT adds the corresponding View blocks (such as `<ocpRelease>-LP-OCP-Compat--lpGA`) to
+`config/views.yaml` for the next Minor Release.
+
+**Test Suite and Test Case terminology:** A Test Suite (TS) corresponds to a JUnit XML `<testsuite name="...">` element. The `name` attribute value is what
+Sippy and `ci-test-mapping` use for matching against configured patterns. A Test Case (TC) corresponds to a `<testcase>` element nested within a `<testsuite>`.
+
+**CR architecture and LP fit:** In the native OCP context, a CR Component maps to an individual OCP software component (such as `etcd` or `kube-apiserver`) and
+a CR View maps 1:1 to an OCP Minor Release. LP OCP Compat onboarding adapts this model: each LP is treated as a single CR Component representing the entire
+product, not the individual software components that make up that product. The `LP-OCP-Compat` View family is therefore not 1:1 to a product; it is a test
+group -- a collection of LP compatibility test results across multiple products for a given OCP Release. Compatibility testing is a whole-system test: whether
+the LP installs and operates correctly on the OCP cluster, with no visibility into the LP's internal component breakdown.
+
+**CR-compliant CI Operator Job Conf.:** For the steps required to configure a CI Operator Job so that its results are parsed correctly by CR, see the [CI
+Operator Job Configuration](#ci-operator-job-configuration) section.
 
 ### Sippy
 
-This checklist covers the changes required in [Sippy](https://github.com/openshift/sippy) to onboard a CI Operator Job for a new LP.
+The steps in this section register a CI Operator Job in [Sippy](https://github.com/openshift/sippy/) so that its Runs appear in CR.
 
----
+The following changes are required:
+ 1. Ensuring the BigQuery query pattern covers the CI Operator Job (`pkg/variantregistry/ocp.go`: `LoadExpectedJobVariants()`).
+ 2. Mapping the CI Operator Job name to an `Owner` variant label (`pkg/variantregistry/ocp.go`: `setOwner()`).
+ 3. Mapping the CI Operator Job name to a `LayeredProduct` variant label (`pkg/variantregistry/ocp.go`: `setLayeredProduct()`).
+ 4. Including that label in the LP OCP Compat Dashboard Views (`config/views.yaml`).
+ 5. Regenerating the variant snapshot (`pkg/variantregistry/snapshot.yaml`).
+ 6. Allowing the TSs to be imported into Sippy's database (`pkg/db/suites.go`).
 
-#### Prerequisites: gather required information
+For standard LP OCP Compat onboardings that follow the `periodic-ci-<org>-<repo>-<branch>-*-<lpVer>-lp-ocp-compat-cr--<lpName>--*` Job naming convention, Steps
+1, 2, and 6 can often be skipped (see each Step for details).
 
-1. **JUnit Test Suite (TS) name prefix**: Identify the TS name prefix in the JUnit results produced by the CI Operator Job. See [Map the JUnit tests output](../Scenario_Development/Scenario_Development_Guide.md#map-the-junit-tests-output) in the Scenario Development Guide on how to add the prefix if the actual tests do not produce a TS with a consistent prefix.
+Commit all changes in a single PR against the `main` branch of [openshift/sippy](https://github.com/openshift/sippy).
 
-2. **Stable substring of periodic CI Operator Job name**: Within the [openshift/release](https://github.com/openshift/release/) GitHub Repository, under CI Jobs `periodics` files (`ci-operator/jobs/**/*-periodics.yaml`), identify a stable substring present in the relevant `periodics[].name` value (e.g. `-lp-interop-cr-my-comp`). The CR Variant Registry matches **literal substrings** on the lowercased CI Operator Job name (first match wins). 
+----
+#### Prerequisites
 
----
+Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy), gather the following information.
 
-#### 1. Allow importing tests: `pkg/db/suites.go`
+ 1. **TS name prefix:** Identify the TS name prefix present in the JUnit results produced by the CI Operator Job. The JUnit XML files are in the Prow Job
+    Artifacts directory, accessible via the "Artifacts" link on the Prow Job page, under the Test Step directory. Look for `<testsuite name="...">` elements;
+    the `name` attribute is the prefix Sippy matches against. To establish a consistent prefix, set `DR__RP__CR_COMP_NAME` to `lp-ocp-compat--<lpName>` in the
+    CI Operator Job Conf. (see [Prerequisites](#prerequisites), item 1).
+
+ 2. **Stable CI Operator Job name sub-string:** All CI Operator Job Conf. files live in [openshift/release](https://github.com/openshift/release/), under
+    `ci-operator/config/<lpOrg>/<lpRepo>/` where `<lpOrg>/<lpRepo>` is the LP Upstream Test repository (not `openshift/release` itself). CI Operator Prow Job
+    files under `ci-operator/jobs/` are auto-generated by `make jobs` and must not be edited directly. Find the relevant `.periodics[].name` value in the
+    generated file. Generated Prow Job files follow the naming pattern `ci-operator/jobs/<org>/<repo>/<org>-<repo>-<branch>-periodics.yaml`. For example, for
+    an LP whose CI Operator Job Conf. is at `ci-operator/config/myorg/myrepo/myorg-myrepo-main__variant1-variant2-lpGA-lp-ocp-compat.yaml`, the generated
+    periodics file is at `ci-operator/jobs/myorg/myrepo/myorg-myrepo-main-periodics.yaml`. Search that file for the LP's job name using the variant sub-string
+    (for example, `lp-ocp-compat`) as a grep keyword. Job names follow the format `periodic-ci-<org>-<repo>-<branch>-<some-variants>-<testname>`. Identify a
+    "stable sub-string" of that name: a part that does not include the OCP release number or branch name and is therefore present regardless of the OCP version
+    being tested. For example, given the job name `periodic-ci-myorg-myrepo-v1.2-ocp4.22-lpGA-lp-ocp-compat-cr--my-product--aws`, the segments `v1.2` (branch)
+    and `ocp4.22` (OCP version as part of CI Operator Job Variant) change per release. The stable sub-string is `-lpga-lp-ocp-compat-cr--my-product-`
+    (lower-cased, because the Registry matches against the lower-cased CI Operator Job full name) because it is present in all CI Operator Job Variants. The CR
+    Variant (which is a different concept from CI Operator Job Variant) Registry matches literal sub-strings against the lower-cased CI Operator Job full name;
+    the first matching entry in `layeredProductPatterns` wins.
+
+----
+#### Step 1 -- Confirm BigQuery Job Pattern Match
+
+**File:** [pkg/variantregistry/ocp.go](https://github.com/openshift/sippy/blob/main/pkg/variantregistry/ocp.go)
+
+**Variable:** `jobPatterns` in function `LoadExpectedJobVariants()`
+
+Sippy populates its variant data from a BigQuery query that is scoped to CI Operator Job names matching one of the patterns in `jobPatterns`. The following
+pattern is already present in the codebase and covers all standard LP OCP Compat Job names:
+```
+"periodic-ci-%%-lp-ocp-compat-%%"
+```
+
+**Note:**
+- A new entry in `jobPatterns` is needed only when the CI Operator Job name does not match any existing pattern. For standard LP OCP Compat jobs following the
+  `periodic-ci-<org>-<repo>-<some-variants>-<lpVer>-lp-ocp-compat-cr--<lpName>--<other-test-variants>` naming convention, the existing
+  `"periodic-ci-%%-lp-ocp-compat-%%"` pattern already matches; skip this step.
+
+----
+#### Step 2 -- Map CI Operator Job Name to a CR Variant `Owner`
+
+**File:** [pkg/variantregistry/ocp.go](https://github.com/openshift/sippy/blob/main/pkg/variantregistry/ocp.go)
+
+**Variable:** `ownerPatterns` in function `setOwner()`
+
+The `setOwner()` function assigns the CR Variant `Owner` value based on a sub-string match against the lower-cased CI Operator Job name. The patterns are
+scanned top to bottom; the first matching entry wins.
+```go
+// {sub-string, owner}
+{"-lp-ocp-compat-", "lp"},
+```
+
+**Note:**
+- The sub-string `-lp-ocp-compat-` already maps to owner `"lp"` in the codebase. This is intentionally a broad pattern covering all LP OCP Compat CI Operator
+  Jobs, avoiding the need for per-LP entries.
+- The sub-string starts and ends with `-`, a good practice to prevent partial-word collisions.
+
+----
+#### Step 3 -- Map CI Operator Job Name to a CR Variant `LayeredProduct`
+
+**File:** [pkg/variantregistry/ocp.go](https://github.com/openshift/sippy/blob/main/pkg/variantregistry/ocp.go)
+
+**Variable:** `layeredProductPatterns` in function `setLayeredProduct()`
+
+The `setLayeredProduct()` function assigns the CR Variant `LayeredProduct` value based on a sub-string match against the lower-cased CI Operator Job name. The
+patterns are scanned top to bottom; the first matching entry wins.
+```go
+// {sub-string, product}
+{"-lpga-lp-ocp-compat-cr--my-product-", "lp-ocp-compat--my-product--lpGA"},
+```
+
+**Placement:** Insert a new row in the appropriate position. If the sub-string does not overlap with any existing entry, placing it at the end is safe. If it
+could match a broader existing entry, place it above that entry.
+
+**Rules:**
+- **`sub-string` value:** Must appear verbatim in the lower-cased CI Operator Job name. Starting and ending the sub-string with `-` (for example,
+  `-lpga-lp-ocp-compat-cr--my-product-`) prevents partial-word collisions. The sub-string must align with the actual CI Operator Job naming convention in
+  [openshift/release](https://github.com/openshift/release).
+- **`product` value:** Always use the `lp-ocp-compat--<lpName>--<lpVer>` form (double-dash, `--`, to separate prefix), for example,
+  `lp-ocp-compat--my-product--lpGA`. This string is used by CR Views to include a specific LP.
+
+----
+#### Step 4 -- Include Product in LP OCP Compat Views
+
+**File:** [config/views.yaml](https://github.com/openshift/sippy/blob/main/config/views.yaml)
+
+Add the LP's `product` value to the `.include_variants.LayeredProduct` list in each applicable `<ocpRelease>-LP-OCP-Compat--<lpVer>` View block (see [General
+Information](#general-information)), keeping the list alphabetically sorted:
+```yaml
+- name: 4.22-LP-OCP-Compat--lpGA
+  include_variants:
+    ...
+    LayeredProduct:
+      - lp-ocp-compat--a-existing-product
+      - lp-ocp-compat--my-product--lpGA   # newly added
+      - lp-ocp-compat--z-existing-product
+```
+
+The string added here must exactly match the `product` field used in `setLayeredProduct()` (the `lp-ocp-compat--<lpName>--<lpVer>` value). This list is scoped
+to the single view block being edited. Most LPs add to the `lpGA` view; add to `lpMainline` only when the LP explicitly tests against its own mainline (not GA)
+version. Add the product label to every view block for every OCP Release the LP supports.
+
+----
+#### Step 5 -- Update Variant Snapshot
+
+Run the following commands from the root of the [openshift/sippy](https://github.com/openshift/sippy) local clone git WorkTree (a Go toolchain is required):
+```bash
+make update-variants    # builds the ./sippy executable
+./sippy variants snapshot --config ./config/openshift.yaml
+```
+
+**Note:**
+- Snapshot tests in CI will fail until this command is run and its output is committed.
+
+----
+#### Step 6 -- Confirm TS Import Pattern Coverage
 
 **File:** [pkg/db/suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go)
 
-**Variable:** **`testSuitePatterns`** (`[]*regexp.Regexp`)
+**Variable:** `testSuitePatterns`
 
-For **standard LP interop onboarding**, **do not** add product-specific suite strings to **`testSuites`**. Instead, rely on **`testSuitePatterns`**: ensure every suite-name prefix CI produces is covered by a regex. Current upstream patterns already include LP-oriented patterns such as `^lp-chaos--`, `^lp-interop--`, and `^lp-ocp-compat--` (see `testSuitePatterns` in [suites.go](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go#L80)). As long as your CI output follows the `^lp-ocp-compat--` pattern, no new entry is required in this file.
-
-- **New prefix family:** If CI introduces suite names that **do not** match any existing pattern, add **`regexp.MustCompile(...)`** to **`testSuitePatterns`** rather than enumerating literals.
-- **ci-test-mapping:** Keep **`Matchers`** (**`Suite`** / **`SuiteRegEx`**) aligned with the suite strings CI actually produces; Sippy import coverage is via **`testSuitePatterns`**, not by duplicating every suite string in **`testSuites`**.
-
-Suites that match **neither** patterns **nor** the explicit list are **not** imported into Sippy's DB.
-
----
-
-#### 2. Map CI Operator Job names to `LayeredProduct`: `pkg/variantregistry/ocp.go`
-
-**File:** `pkg/variantregistry/ocp.go`
-**Function:** `setLayeredProduct`
-
-In the `setLayeredProduct` function, append a new row to the mapping table that links CI Operator Job periodic name substrings to the corresponding `LayeredProduct` variant:
+Sippy imports TS names that match either a literal entry in `testSuites` or a regex in `testSuitePatterns`. For LP OCP Compat onboarding, the
+`testSuitePatterns` regex is the relevant mechanism. The following LP-oriented patterns are already present in the codebase:
 
 ```go
-{"-lp-interop-cr-my-comp", "lp-interop-my-comp"},
-```
-
-**Rules:**
-
-- **`product` value:** always use the **`lp-interop-…`** form (lowercase, hyphenated), e.g. `lp-interop-my-comp`. This is what Component Readiness views filter on.
-- **`substring`:** must appear in real periodic CI Operator Job names after lowercasing. Align with CI naming (often `-lp-interop-cr-my-comp`).
-  - Additionally, if **multiple** branches are required for the same product, **the more specific patterns** should be preferred over the more general patterns (e.g., `-lp-interop-cr-acs` and `-lp-interop-cr-acs-latest`).
-- **Order matters:** the slice is scanned top to bottom; the **first** match wins. Place narrower patterns (e.g. product-specific) above broader patterns.
-
-> **WARNING** (`pkg/variantregistry/ocp.go`, `setLayeredProduct`)
->
-> Because the mapping table is evaluated in **slice order**, the first successful substring match stops further evaluation for that CI Operator Job (next rows are ignored).
-> Do not append a specific LP row below a broader row that could match the same name (e.g., placing `{"-lp-interop-cnv", "virt"}` below a generic `{"-virt", "virt"}`). Misordering results in CI Operator Jobs being "swallowed" by generic categories, causes them to be misclassified and correspond to the wrong component in the Component Readiness interop dashboard.
-
----
-
-#### 3. Include the product in LP-Interop views: `config/views.yaml`
-
-**File:** `config/views.yaml`
-
-For each Component Readiness view named like **`*-LP-Interop`** (e.g. `4.22-LP-Interop`, `4.21-LP-Interop`) that lists layered products under:
-
-```yaml
-variant_options:
-  include_variants:
-    LayeredProduct:
-      - lp-interop-...
-```
-
-add:
-
-```yaml
-      - lp-interop-my-comp
-```
-
-Use the **same string** as in `setLayeredProduct`'s `product` field. Keep the list **alphabetically sorted** unless the file already uses a different convention for that block.
-
----
-
-#### 4. Update Variant Snapshot
-
-**Test:** `TestVariantsSnapshot` in `pkg/variantregistry/ocp_test.go` validates live variants for all CI Operator Jobs in `config/openshift.yaml` against a static baseline in **`pkg/variantregistry/snapshot.yaml`**.
-
-Run the command below **after** all the above changes has been applied:
-
-
-This process overwrites `pkg/variantregistry/snapshot.yaml` with the updated classification data.
-
-> [!NOTE]
-> It is expected that snapshot tests will fail in CI until the execution of the `make update-variants` sync command.
-
-### CI Test Mapping
-
-This checklist covers the changes required in the [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping) repository to onboard a CI Operator Job into Component Readiness.
-
-The steps below add a new **layered product interop** component to that repository. Component Readiness maps each test to one **component** and optional **capabilities**. LP interop CI Operator Jobs publish JUnit with a dedicated mapped **test suite** name produced from `DR__RP__CR_COMP_NAME`: pattern **`lp-ocp-compat--<lpProductName>`**.
-
----
-
-#### Prerequisites
-
-1. **Mapped suite string is stable** and appears on every relevant JUnit result as the suite attribute (same value supplied by `DR__RP__CR_COMP_NAME` in CI; pattern **`lp-ocp-compat--<lpProductName>`**, e.g. **`lp-ocp-compat--MyProduct`**).
-2. **Registered `OCPBUGS` component name**: `DefaultJiraComponent` must correspond to a real Jira component the team owns.
-
-   - Verify components with `./ci-test-mapping jira-verify` as described in the root [README.md](../../README.md#updating-jira-components).
-   - Registered components can be found at [OCPBUGS components](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components).
-
----
-
-#### 1. Include the suite in the OpenShift mapping config
-
-Edit [config/openshift-eng.yaml](../../config/openshift-eng.yaml) and add a pattern matching the mapped suite to `includeSuitePatterns`, in alphabetical order with the other `*-lp-interop` entries:
-
-```yaml
-includeSuitePatterns:
-  - `^my-prefix-pattern--`
-```
-
-Without this, tests from that suite may not appear in the mapping inputs at all.
-
----
-
-#### 2. Add a component package
-
-Create a new directory:
-
-`pkg/components/myproductlpinterop/`
-
-##### `component.go`
-
-Model it on [pkg/components/myproductlpinterop/component.go](../../pkg/components/myproductlpinterop/component.go):
-
-- Set `Name` to the same string as the mapped JUnit suite (e.g. `lp-ocp-compat--MyProduct`) so it matches `Register` and `Suite` matchers. Set `DefaultJiraComponent` to the **OCPBUGS** Jira component name owned by the team. Older naming styles (e.g. `MyProduct-lp-interop`) remain acceptable and do **not** need to match the suite string.
-- Use **`Matchers`** so this component owns the right tests:
-  - **`Suite`**: Use for an **exact** JUnit suite string. Many components still carry a **legacy** row such as `{Suite: "MyProduct-lp-interop"}` (component-style name); keep it when tests still report that suite (**do not drop it** when adding **`SuiteRegEx`**).
-  - **`SuiteRegEx`**: Use `regexp.MustCompile(...)` for **additional** suite prefixes or patterns (for example `^lp-ocp-compat--MyProduct--`, `^lp-interop--MyProduct--`, `^lp-chaos--MyProduct--`). Add `"regexp"` to the imports in `component.go`. Regex suite matching in **`ComponentMatcher`** is **newer** than plain **`Suite`**; it **extends** legacy **`Suite`** rows rather than replacing them.
-
-  ```go
-  // Example only: replace MyProduct / myproductlpinterop with your product identifiers.
-
-  import (
-      "regexp"
-
-      "github.com/openshift-eng/ci-test-mapping/pkg/config"
-  )
-
-  var MyProductLpInteropComponent = Component{
-      Component: &config.Component{
-          Name:                 "MyProduct-lp-interop",
-          Operators:            []string{},
-          DefaultJiraComponent: "MyProduct",
-          Matchers: []config.ComponentMatcher{
-              {Suite: "MyProduct-lp-interop"}, // legacy exact suite (keep when present)
-              {SuiteRegEx: regexp.MustCompile(`^lp-ocp-compat--MyProduct--`)},
-              {SuiteRegEx: regexp.MustCompile(`^lp-interop--MyProduct--`)},
-              {SuiteRegEx: regexp.MustCompile(`^lp-chaos--MyProduct--`)},
-          },
-      },
-  }
-  ```
-
-For finer-grained ownership later, add more `ComponentMatcher` entries (substrings, priorities, per-matcher Jira components) using patterns from [pkg/components/example](../../pkg/components/example).
-
-##### `capabilities.go`
-
-Add a `capabilities.go` next to `component.go`, modeled on [pkg/components/myproductlpinterop/capabilities.go](../../pkg/components/myproductlpinterop/capabilities.go). Define `identifyCapabilities` starting from `util.DefaultCapabilities(test)`; extend the returned slice only when capabilities beyond the defaults are required.
-
-```go
-package myproductlpinterop
-
-import (
-	v1 "github.com/openshift-eng/ci-test-mapping/pkg/api/types/v1"
-	"github.com/openshift-eng/ci-test-mapping/pkg/util"
-)
-
-func identifyCapabilities(test *v1.TestInfo) []string {
-	capabilities := util.DefaultCapabilities(test)
-	return capabilities
+var testSuitePatterns = []*regexp.Regexp{
+    regexp.MustCompile(`^lp-chaos--`),
+    regexp.MustCompile(`^lp-interop--`),
+    regexp.MustCompile(`^lp-ocp-compat--`),
 }
 ```
 
----
+**Note:**
+- A new `regexp.MustCompile(...)` entry is needed only when the CI Operator Job produces a TS name prefix family not covered by any existing pattern. For
+  standard LP OCP Compat onboardings where TS names follow the `lp-ocp-compat--<lpName>--` prefix convention (see [Ensuring JUnit XML TS Names Have Correct
+  Prefix](#ensuring-junit-xml-ts-names-have-correct-prefix)), the existing `^lp-ocp-compat--` RegEx pattern already covers the TS names; skip this step in that
+  case.
 
-#### 3. Register the component
+----
+### CI Test Mapping
 
-Edit [pkg/registry/registry.go](../../pkg/registry/registry.go):
+The steps in this section onboard a new LP as CR Component into [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping), which maps
+Test Suites (TS) to CR Components and Capabilities. Once mapped, each TC within the LP's TS appears in CR attributed to the correct Component.
 
-1. Add the import:
+----
+#### Prerequisites
 
-   ```go
-   "github.com/openshift-eng/ci-test-mapping/pkg/components/myproductlpinterop"
-   ```
+Before opening a PR against [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping), verify the following.
+ 1. **Stable TS string:** See [Sippy Prerequisites](#prerequisites-1), item 1.
+ 2. **Valid `OCPBUGS` Jira Component:** The `.Component.DefaultJiraComponent` field in `pkg/components/<lpComp>/component.go` must correspond to a real Jira
+    Component in the [OCPBUGS](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) project.
 
-2. Register next to the other LP interop component entries (keep ordering consistent with nearby registrations):
+----
+#### Step 1 -- Register TS Name Pattern
 
-   ```go
-   r.Register("lp-ocp-compat--MyProduct", &myproductlpinterop.MyProductLpInteropComponent)
-   ```
+**File:** [config/openshift-eng.yaml](https://github.com/openshift-eng/ci-test-mapping/blob/main/config/openshift-eng.yaml)
 
-The string passed to `Register` is the **component name** used in mappings; it must match `Name` in the `config.Component` block and the mapped JUnit **suite** string (the example above uses **`lp-ocp-compat--MyProduct`**).
+Add an entry for the LP TS to `includeSuitePatterns`. The pattern syntax uses SQL `LIKE`-style wildcards (`%` matches any sequence of characters):
+```yaml
+ ...
+includeSuitePatterns:
+ ...
+  - "lp-ocp-compat--%"
+ ...
+```
 
----
+The `ci-test-mapping` uses this configuration to fetch TCs included in the matching TS names from BigQuery. The trailing `%` is a SQL `LIKE` wildcard matching
+any character sequence. This pattern matches `lp-ocp-compat--lp-product-a` and `lp-ocp-compat--lp-product-b`. Always include the trailing `%`.
 
-#### 4. Validate and ship
+**Note:**
+- A new entry is needed only when no existing pattern covers the LP TS names. For standard LP OCP Compat onboardings where TS names follow the
+  `lp-ocp-compat--<lpName>--` prefix convention (set via `DR__RP__CR_COMP_NAME`, see [Ensuring JUnit XML TS Names Have Correct
+  Prefix](#ensuring-junit-xml-ts-names-have-correct-prefix)), the existing `"lp-ocp-compat--%"` SQL `LIKE` pattern already covers them; skip this step in that
+  case.
+- Insert the new entry in alphabetical order alongside the existing entries.
 
-1. Regenerate committed mapping data: after changing config or components, run `make mapping`.
-2. Do not execute `make` as part of implementing these steps; flag that this step is mandatory before merge.
+----
+#### Step 2 -- Add Component Package
+
+Create a directory `pkg/components/<lpComp>/` in the git WorkTree. The directory name is also the Go Package name, therefore must follow Go Package naming
+rules (`[a-z][a-z0-9]*`). Prefix the name with `lp` (for example, `pkg/components/lpmyproduct/`) to clearly distinguish LP-style CR Component packages from the
+native OCP CR Component packages that share the same repository. The directory must contain two files: `component.go` and `capabilities.go`.
+
+----
+##### `component.go`
+
+[pkg/components/quaylpinterop/component.go](https://github.com/openshift-eng/ci-test-mapping/blob/main/pkg/components/quaylpinterop/component.go) serves as
+example.
+
+The file defines the CR Component Struct, its name, the Jira Component, and the TS matchers:
+- `.Component.Name`: The CR Component identifier string, by convention is passed to
+  [`r.Register()`](https://github.com/openshift-eng/ci-test-mapping/blob/main/pkg/registry/registry.go) as its first parameter. The `Name` string is displayed
+  as the CR Component label in the CR Dashboard. Use the `lp--<lpName>` form (for example, `lp--my-product`).
+- `.Component.DefaultJiraComponent`: The [`OCPBUGS`](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) Jira Component name, following
+  the pattern `LP--<lpName>` (for example, `LP--my-product`). Run `./ci-test-mapping jira-verify` (see Note below) to confirm this value resolves to a real
+  Jira Component before opening the PR.
+- `.Component.Matchers`: Defines the TC ownership matching rules for this Component.
+  - `.Component.Matchers[].SuiteRegEx`: Matches a RegEx pattern against the TS name. Use this for the standard LP TS prefixes (`^lp-ocp-compat--my-product--`,
+    `^lp-interop--my-product--`, `^lp-chaos--my-product--`).
+
+Boilerplate:
+```go
+// Replace `lpmyproduct` with the lp-prefixed Go Package name, and `my-product` with the hyphenated product name.
+
+package lpmyproduct
+
+import (
+    "regexp"
+
+    v1 "github.com/openshift-eng/ci-test-mapping/pkg/api/types/v1"
+    "github.com/openshift-eng/ci-test-mapping/pkg/config"
+)
+
+type Component struct {
+    *config.Component
+}
+
+var LP_lpmyproduct_Component = Component{
+    Component: &config.Component{
+        Name:                 "lp--my-product",
+        Operators:            []string{},
+        DefaultJiraComponent: "LP--my-product",
+        Matchers: []config.ComponentMatcher{
+            {SuiteRegEx: regexp.MustCompile(`^lp-ocp-compat--my-product--`)},
+        },
+    },
+}
+
+func (c *Component) IdentifyTest(test *v1.TestInfo) (*v1.TestOwnership, error) {
+    if matcher := c.FindMatch(test); matcher != nil {
+        jira := matcher.JiraComponent
+        if jira == "" {
+            jira = c.DefaultJiraComponent
+        }
+        return &v1.TestOwnership{
+            Name:           test.Name,
+            Component:      c.Name,
+            JIRAComponent:  jira,
+            Priority:       matcher.Priority,
+            Capabilities:   append(matcher.Capabilities, identifyCapabilities(test)...),
+        }, nil
+    }
+    return nil, nil
+}
+
+func (c *Component) StableID(test *v1.TestInfo) string {
+    if stableName, ok := c.TestRenames[test.Name]; ok {
+        return stableName
+    }
+    return test.Name
+}
+
+func (c *Component) JiraComponents() (components []string) {
+    components = []string{c.DefaultJiraComponent}
+    for _, m := range c.Matchers {
+        components = append(components, m.JiraComponent)
+    }
+    return components
+}
+```
+
+**Note:**
+- Run the following from the root of the [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping) local clone git WorkTree. A Go
+  toolchain is required. The environment variables `JIRA_USER` (Jira account username, typically the account email), `JIRA_TOKEN` (Personal API Token from the
+  Jira Profile page), and `JIRA_TOKEN_BASIC` (base64-encoded `username:token`) must be set before running `jira-verify`. Fix any reported errors before
+  proceeding.
+  ```bash
+  export JIRA_TOKEN_BASIC="$(
+      typeset jiraAuth="${JIRA_USER}:${JIRA_TOKEN}"
+      case $(uname -s) in
+        (Linux)   echo -n "${jiraAuth}" | base64 -w 0;;
+        (Darwin)  echo -n "${jiraAuth}" | base64 | tr -d '\n';;
+      esac
+  )"
+
+  go build -o ./ci-test-mapping .
+  ./ci-test-mapping jira-verify
+  ```
+
+----
+##### `capabilities.go`
+
+[pkg/components/quaylpinterop/capabilities.go](https://github.com/openshift-eng/ci-test-mapping/blob/main/pkg/components/quaylpinterop/capabilities.go) serves
+as example.
+
+The file defines the CR Component Capabilities:
+- The default Capabilities are sufficient.
+
+Boilerplate:
+```go
+package lpmyproduct
+
+import (
+    v1 "github.com/openshift-eng/ci-test-mapping/pkg/api/types/v1"
+    "github.com/openshift-eng/ci-test-mapping/pkg/util"
+)
+
+func identifyCapabilities(test *v1.TestInfo) []string {
+    capabilities := util.DefaultCapabilities(test)
+    return capabilities
+}
+```
+
+----
+#### Step 3 -- Register the Component
+
+**File:** [pkg/registry/registry.go](https://github.com/openshift-eng/ci-test-mapping/blob/main/pkg/registry/registry.go)
+
+**Function:** `NewComponentRegistry()`
+
+Add the import and `Register` call alongside the other LP Component registrations:
+```go
+package registry
+
+import (
+ ...
+    "github.com/openshift-eng/ci-test-mapping/pkg/components/lpmyproduct"
+ ...
+)
+ ...
+func NewComponentRegistry() *Registry {
+ ...
+    r.Register("lp--my-product", &lpmyproduct.LP_lpmyproduct_Component)
+ ...
+}
+```
+
+The string passed to `Register` must exactly match the `Name` field set in the `config.Component` block in `component.go`.
+
+----
+#### Step 4 -- Validate and Finalize
+
+Run the following from the root of the [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping) local clone git WorkTree:
+```bash
+make mapping
+```
+
+Commit all changes in a single PR against the `main` branch of [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping).
+
+### CI Operator Job Configuration
+
+This section documents the changes required in [openshift/release](https://github.com/openshift/release) to make a CI Operator Job CR-compliant. This is the
+third PR required for LP OCP Compat onboarding. The `sippy` and `ci-test-mapping` PRs both depend on this configuration being in place and producing correct
+JUnit output before they take effect.
+
+The CI Operator Job Conf. must satisfy two requirements:
+ 1. The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()` in Sippy correctly
+    assigns the `LayeredProduct` CR Variant label.
+ 2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<lpName>` in the `.tests[].steps.env` block so that JUnit output uses the
+    correct `<testsuite name="...">` prefix.
+
+----
+#### Job Name Pattern
+
+The CI Operator Job name is generated from the CI Operator Job Conf. file path and the `.tests[].as` value (the test's short Job name). Three possibilities
+cover the standard LP OCP Compat use cases, all producing the same `-<lpVer>-lp-ocp-compat-cr--<lpName>-` sub-string, satisfying the `setLayeredProduct()`
+sub-string match.
+ 1. **Dedicated `lp-ocp-compat` CI Operator Job Conf. Variant file:**
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>-lp-ocp-compat.yaml`
+  - Set `.tests[].as: cr--<lpName>--<testVariants>`
+ 2. **Existing Variant file with an `lp-ocp-compat-cr` test name:**
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>.yaml`
+  - Set `.tests[].as: lp-ocp-compat-cr--<lpName>--<testVariants>`
+ 3. **LP hosts the job in its own CI Operator Job Conf. file:**
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>.yaml` (when the other two patterns cannot
+    be used as the file name).
+  - Set `.tests[].as: <lpVer>-lp-ocp-compat-cr--<lpName>--<testVariants>`
+
+**Note:** The `<lpVer>` indicates the LP version being tested. Possible values:
+- `lpGA`        --  LP General Availability version.
+- `lpMainline`  --  LP mainline/development version.
+- `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
+
+----
+#### Ensuring JUnit XML TS Names Have Correct Prefix
+
+The following changes are required:
+ 1. Set these two Environment Variables in the CI Operator Job Conf. file (`ci-operator/config/**/*.yaml`) inside the `.tests[].steps.env` block.
+    ```yaml
+     ...
+    tests:
+      - as: cr--my-product--aws
+        steps:
+          env:
+            MAP_TESTS: "true"
+            DR__RP__CR_COMP_NAME: lp-ocp-compat--my-product
+     ...
+    ```
+    **Note:**
+    - The value `lp-ocp-compat--my-product` becomes the `<testsuite name="...">` attribute in JUnit XML result files. This must satisfy the
+      [`testSuitePatterns`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go) RegEx pattern and the
+      [`includeSuitePatterns`](https://github.com/openshift-eng/ci-test-mapping/blob/main/config/openshift-eng.yaml) SQL `LIKE` pattern.
+ 2. In the CI Operator Step Script that performs the test and produces the JUnit XML result files (the post-processing helper is provided by
+    [RedHatQE/OpenShift-LP-QE--Tools](https://github.com/RedHatQE/OpenShift-LP-QE--Tools)):
+    ```bash
+    if [ "${MAP_TESTS}" = "true" ]; then
+        eval "$(
+            typeset -a _fURL=()
+            type -t wget 1>/dev/null && _fURL=(wget -qO-) || _fURL=(curl -fsSL)
+            "${_fURL[@]}" \
+    https://raw.githubusercontent.com/RedHatQE/OpenShift-LP-QE--Tools/refs/heads/main/libs/bash/ci-operator/interop/common/ExitTrap--PostProcessPrep.sh
+        )"; trap '
+            LP_IO__ET_PPP__NEW_TS_NAME="${DR__RP__CR_COMP_NAME}--%s" \
+                ExitTrap--PostProcessPrep junit--<testName>.xml
+        ' EXIT
+    fi
+    ```
+    **Note:**
+    - This script can either be in CI Operator Step Script or the CI Operator Job Conf. file `.tests[].steps.test[].commands` block.
+
+Commit the CI Operator Job Conf. file change in a PR against the `main` branch of [openshift/release](https://github.com/openshift/release) (for example,
+`ci-operator/config/myorg/myrepo/myorg-myrepo-main-lpGA-lp-ocp-compat.yaml`).
+
+----
+### Verification
+
+After all three PRs are merged, navigate to the CR LP OCP Compat View for the target OCP release (for example,
+[4.22-LP-OCP-Compat--lpGA](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main?view=4.22-LP-OCP-Compat--lpGA)) and confirm the product label
+appears in the results. If the product does not appear, contact TRT at `#forum-ocp-release-oversight` on Slack.
 
