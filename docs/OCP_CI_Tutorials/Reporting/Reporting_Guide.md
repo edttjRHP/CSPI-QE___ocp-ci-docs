@@ -269,19 +269,11 @@ This section documents the changes required in [openshift/release](https://githu
 in the table above. The [openshift/sippy](https://github.com/openshift/sippy) and [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping)
 PRs both depend on this configuration being in place and producing correct JUnit output before they take effect.
 
-The CI Operator Job Conf. must satisfy the following requirements:
- 1. **LayeredProduct compatibility:** The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()`
-    in Sippy correctly assigns the `LayeredProduct` CR Variant label.
- 2. **Test Mapping Prefix:** The Data Router (DR) `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so
-    that JUnit output uses the correct `<testsuite name="...">` prefix.
- 3. **CI Operator Workflow:** Use the [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr) CI Operator Workflow where
-    applicable. This is the recommended workflow for LP OCP Compat CR onboarding; it wires the CI Operator Job to the correlated CR, Firewatch, and related
-    interop automations in one place.
- 4. **Schedule:** Set `.tests[].cron` to `0 3,15 * * *` (twice daily at 03:00 and 15:00 UTC). Component Readiness (CR) requires sufficiently frequent CI
-    Operator Job results to produce reliable health signals.
- 5. **Slack reporting:** If LP onboarding renames CI Operator Job test names (the `.tests[].as` value), modify the `.config.prowgen` `slack_reporter`
-    configuration in [openshift/release](https://github.com/openshift/release) so `job_names` or `job_name_patterns` reflect the new test names. See
-    [Set Up Slack Alerts for Job Results](https://docs.ci.openshift.org/docs/how-tos/notification/).
+The CI Operator Job Conf. must satisfy two requirements:
+ 1. The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()` in Sippy correctly
+    assigns the `LayeredProduct` CR Variant label.
+ 2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so that JUnit output uses the
+    correct `<testsuite name="...">` prefix.
 
 ----
 #### Job Name Pattern
@@ -404,18 +396,18 @@ Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy
 
 **File:** [pkg/variantregistry/ocp.go](https://github.com/openshift/sippy/blob/main/pkg/variantregistry/ocp.go)
 
-**Variable:** `prowjob_job_name` in function `LoadExpectedJobVariants()`
+**Variable:** `queryStr` in function `LoadExpectedJobVariants()`
 
-Sippy populates its variant data from a BigQuery query that is scoped to CI Operator Job names matching one of the patterns in `prowjob_job_name`. The following
-pattern is already present in the codebase and covers all standard LP OCP Compat Job names:
+Sippy populates its variant data from a BigQuery query that is scoped to CI Operator Job names matching one of the patterns in the `prowjob_job_name` column in
+the `WHERE` clause. The following pattern is already present in the codebase and covers all standard LP OCP Compat Job names:
 ```
 "periodic-ci-%%-lp-ocp-compat-%%"
 ```
 
 **Note:**
-- A new entry in `prowjob_job_name` is needed only when the CI Operator Job name does not match any existing pattern. For standard LP OCP Compat jobs following the
-  `periodic-ci-<org>-<repo>-<some-variants>-<lpVer>-lp-ocp-compat-cr--<lpName>--<other-test-variants>` naming convention, the existing
-  `"periodic-ci-%%-lp-ocp-compat-%%"` pattern already matches; skip this step.
+- A new entry in the `prowjob_job_name` `WHERE` clause is needed only when the CI Operator Job name does not match any existing pattern. For standard LP OCP
+  Compat jobs following the `periodic-ci-<org>-<repo>-<some-variants>-<lpVer>-lp-ocp-compat-cr--<lpName>--<other-test-variants>` naming convention, the
+  existing `"periodic-ci-%%-lp-ocp-compat-%%"` pattern already matches; skip this step.
 
 ----
 #### Step 2 -- Map CI Operator Job Name to a CR Variant `Owner`
