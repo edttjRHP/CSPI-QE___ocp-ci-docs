@@ -297,8 +297,8 @@ Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy
     periodics file is at `ci-operator/jobs/myorg/myrepo/myorg-myrepo-main-periodics.yaml`. Search that file for the LP's job name using the variant sub-string
     (for example, `lp-ocp-compat`) as a grep keyword. Job names follow the format `periodic-ci-<org>-<repo>-<branch>-<some-variants>-<testname>`. Identify a
     "stable sub-string" of that name: a part that does not include the OCP release number or branch name and is therefore present regardless of the OCP version
-    being tested. For example, given the job name `periodic-ci-myorg-myrepo-v1.2-ocp4.22-lpGA-lp-ocp-compat-cr--my-product--aws`, the segments `v1.2` (branch)
-    and `ocp4.22` (OCP version as part of CI Operator Job Variant) change per release. The stable sub-string is `-lpga-lp-ocp-compat-cr--my-product--`
+    being tested. For example, given the job name `periodic-ci-myorg-myrepo-v1.2-ocp-4.22-lpGA-lp-ocp-compat-cr--my-product--aws`, the segments `v1.2` (branch)
+    and `ocp-4.22` (OCP version as part of CI Operator Job Variant) change per release. The stable sub-string is `-lpga-lp-ocp-compat-cr--my-product--`
     (lower-cased, because the Registry matches against the lower-cased CI Operator Job full name) because it is present in all CI Operator Job Variants. The CR
     Variant (which is a different concept from CI Operator Job Variant) Registry matches literal sub-strings against the lower-cased CI Operator Job full name;
     the first matching entry in `layeredProductPatterns` wins.
