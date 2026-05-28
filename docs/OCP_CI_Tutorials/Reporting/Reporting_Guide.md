@@ -16,9 +16,9 @@
   - [Summary](#summary)
   - [Prerequisites](#prerequisites)
   - [General Information](#general-information)
+  - [CI Operator Job Configuration](#ci-operator-job-configuration)
   - [Sippy](#sippy)
   - [CI Test Mapping](#ci-test-mapping)
-  - [CI Operator Job Configuration](#ci-operator-job-configuration)
   - [Verification](#verification)
 
 ## TestGrid
@@ -185,11 +185,12 @@ Please see [this PR](https://github.com/openshift/release/pull/39700/files) as a
 ## Component Readiness
 
 [Component Readiness](https://sippy.dptools.openshift.org/sippy-ng/component_readiness/main) (CR) is a dashboard within
-[Sippy](https://sippy.dptools.openshift.org/sippy-ng/) that tracks historical test health across OpenShift CI runs. CR surfaces regressions by comparing a
-sample Release window against a baseline, broken down by variant (platform, network, architecture, and Layered Product (LP)). LP is any Red Hat product that is
-tested for compatibility with OpenShift. CI Operator Job run results for LP-OCP Compatibility Test Suites (TS) appear in CR once the job is registered in both
-[openshift/sippy](https://github.com/openshift/sippy/) and [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping). Individual Test
-Cases (TC) that appear within those TSs are mapped to CR Components and Capabilities by `ci-test-mapping`.
+[Sippy](https://sippy.dptools.openshift.org/sippy-ng/) ([Source Code](https://github.com/openshift/sippy/)) that tracks historical test health across OpenShift
+CI runs. CR surfaces regressions by comparing a sample Release window against a baseline, broken down by variant (platform, network, architecture, and Layered
+Product (LP)). LP is any Red Hat product that is tested for compatibility with OpenShift. CI Operator Job run results for LP-OCP Compatibility Test Suites (TS)
+appear in CR once the job is registered in both [openshift/sippy](https://github.com/openshift/sippy/) and
+[openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping). Individual Test Cases (TC) that appear within those TSs are mapped to CR
+Components and Capabilities by `ci-test-mapping`.
 
 ### Summary
 
@@ -220,9 +221,9 @@ Complete the following before opening the Sippy or ci-test-mapping PR.
     directory tree, with JUnit XML files located under the sub-directory for the Test Step, for example, `artifacts/<jobShortName>/<stepName>/artifacts/`).
     Open the JUnit XML files and confirm that each `<testsuite name="...">` begins with the expected `lp-ocp-compat--<LP-name>` prefix.
 
- 2. Have the LP name and the [`OCPBUGS`](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) Jira Component name ready before proceeding.
-    The Jira Component name should follow the pattern `LP--<LP-name>` (for example, `LP--My-product`); this value is used as `.Component.DefaultJiraComponent`
-    in `pkg/components/<lpComp>/component.go`.
+ 2. **Identify the LP name.** The LP name is used in CI Operator Job Conf., Sippy CR Variant labels, and ci-test-mapping component package naming. Additional
+    repo-specific prerequisites are listed under [Sippy Prerequisites](#sippy-prerequisites) and
+    [ci-test-mapping Prerequisites](#ci-test-mapping-prerequisites).
 
 ### General Information
 
@@ -262,9 +263,103 @@ the LP installs and operates correctly on the OCP cluster, with no visibility in
 **CR-compliant CI Operator Job Conf.:** For the steps required to configure a CI Operator Job so that its results are parsed correctly by CR, see the [CI
 Operator Job Configuration](#ci-operator-job-configuration) section.
 
+### CI Operator Job Configuration
+
+This section documents the changes required in [openshift/release](https://github.com/openshift/release) to make a CI Operator Job CR-compliant, as summarized
+in the table above. The [openshift/sippy](https://github.com/openshift/sippy) and [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping)
+PRs both depend on this configuration being in place and producing correct JUnit output before they take effect.
+
+The CI Operator Job Conf. must satisfy the following requirements:
+ 1. **LayeredProduct compatibility:** The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()`
+    in Sippy correctly assigns the `LayeredProduct` CR Variant label.
+ 2. **Test Mapping Prefix:** The Data Router (DR) `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so
+    that JUnit output uses the correct `<testsuite name="...">` prefix.
+ 3. **CI Operator Workflow:** Use the [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr) CI Operator Workflow where
+    applicable. This is the recommended workflow for LP OCP Compat CR onboarding; it wires the CI Operator Job to the correlated CR, Firewatch, and related
+    interop automations in one place.
+ 4. **Schedule:** Set `.tests[].cron` to `0 3,15 * * *` (twice daily at 03:00 and 15:00 UTC). Component Readiness (CR) requires sufficiently frequent CI
+    Operator Job results to produce reliable health signals.
+ 5. **Slack reporting:** If LP onboarding renames CI Operator Job test names (the `.tests[].as` value), modify the `.config.prowgen` `slack_reporter`
+    configuration in [openshift/release](https://github.com/openshift/release) so `job_names` or `job_name_patterns` reflect the new test names. See
+    [Set Up Slack Alerts for Job Results](https://docs.ci.openshift.org/docs/how-tos/notification/).
+
+----
+#### Job Name Pattern
+
+The CI Operator Job name is generated from the CI Operator Job Conf. file path and the `.tests[].as` value (the test's short Job name). Three possibilities
+cover the standard LP OCP Compat use cases, all producing the same `-<lpVer>-lp-ocp-compat-cr--<lpName>-` sub-string, satisfying the `setLayeredProduct()`
+sub-string match.
+ 1. **Dedicated `lp-ocp-compat` CI Operator Job Conf. Variant file:**
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>-lp-ocp-compat.yaml`
+  - Set `.tests[].as: cr--<lpName>--<testVariants>`
+ 2. **Existing Variant file with an `lp-ocp-compat-cr` test name:**
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>.yaml`
+  - Set `.tests[].as: lp-ocp-compat-cr--<lpName>--<testVariants>`
+ 3. **LP hosts the job in its own CI Operator Job Conf. file:**
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>.yaml` (when the other two patterns cannot
+    be used as the file name).
+  - Set `.tests[].as: <lpVer>-lp-ocp-compat-cr--<lpName>--<testVariants>`
+
+**Note:**
+- The `<lpVer>` indicates the LP version being tested. Possible values:
+  - `lpGA`        --  LP General Availability version.
+  - `lpMainline`  --  LP mainline/development version.
+  - `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
+- The OCP release segment in the CI Operator Job name must use the `-ocp-<ocpRelease>-` form, with each segment separated by `-`. For example, use
+  `-ocp-4.22-`, not `-ocp4.22-`. Sippy does not pick up Job results when the release value is concatenated without the separating hyphen.
+
+----
+#### Ensuring JUnit XML TS Names Have Correct Prefix
+
+The following changes are required:
+ 1. Set these two Environment Variables in the CI Operator Job Conf. file (`ci-operator/config/**/*.yaml`) inside the `.tests[].steps.env` block.
+    ```yaml
+     ...
+    tests:
+      - as: cr--my-product--aws
+        steps:
+          env:
+            MAP_TESTS: "true"
+            DR__RP__CR_COMP_NAME: lp-ocp-compat--My-product
+     ...
+    ```
+    **Note:**
+    - The value `lp-ocp-compat--My-product` becomes the `<testsuite name="...">` attribute in JUnit XML result files. This must satisfy the
+      [`testSuitePatterns`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go) RegEx pattern and the
+      [`includeSuitePatterns`](https://github.com/openshift-eng/ci-test-mapping/blob/main/config/openshift-eng.yaml) SQL `LIKE` pattern.
+    - `DR__RP__CR_COMP_NAME` must be set in this file whenever the Job executes the
+      [`mpiit-data-router-reporter`](https://github.com/openshift/release/blob/main/ci-operator/step-registry/mpiit/data-router-reporter/mpiit-data-router-reporter-commands.sh)
+      CI Operator Step (directly, or indirectly via a CI Operator Chain or CI Operator Workflow, such as [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr)), or the Job incorporates a Single-Stage Test (via
+      [`literal_step`](https://steps.ci.openshift.org/ci-operator-reference) stanza) performing an equivalent action.
+ 2. In the CI Operator Step Script that performs the test and produces the JUnit XML result files (the post-processing helper is provided by
+    [RedHatQE/OpenShift-LP-QE--Tools](https://github.com/RedHatQE/OpenShift-LP-QE--Tools)):
+    ```bash
+    if [ "${MAP_TESTS}" = "true" ]; then
+        eval "$(
+            typeset -a _fURL=()
+            type -t wget 1>/dev/null && _fURL=(wget -qO-) || _fURL=(curl -fsSL)
+            "${_fURL[@]}" \
+    https://raw.githubusercontent.com/RedHatQE/OpenShift-LP-QE--Tools/refs/heads/main/libs/bash/ci-operator/interop/common/ExitTrap--PostProcessPrep.sh
+        )"; trap '
+            LP_IO__ET_PPP__NEW_TS_NAME="${DR__RP__CR_COMP_NAME}--%s" \
+                ExitTrap--PostProcessPrep junit--<testName>.xml
+        ' EXIT
+    fi
+    ```
+    **Note:**
+    - This script can either be in CI Operator Step Script or the CI Operator Job Conf. file `.tests[].steps.test[].commands` block.
+    - Ensure `MAP_TESTS` and `DR__RP__CR_COMP_NAME` are declared in the `.ref.env` block of the Step's CI Operator Step Conf. file
+      (`ci-operator/step-registry/**/*-ref.yaml`).
+    - The `<testName>` must be unique within the CI Operator Step; consult the Step author for the correct value (preferred), or alternatively use the
+      `.ref.as` value from the CI Operator Step Conf. file.
+
+Commit the CI Operator Job Conf. file change in a PR against the `main` branch of [openshift/release](https://github.com/openshift/release) (for example,
+`ci-operator/config/myorg/myrepo/myorg-myrepo-main-lpGA-lp-ocp-compat.yaml`).
+
+----
 ### Sippy
 
-The steps in this section register a CI Operator Job in [Sippy](https://github.com/openshift/sippy/) so that its Runs appear in CR.
+The steps in this section register a CI Operator Job in Sippy so that its Runs appear in CR. Open a PR against [openshift/sippy](https://github.com/openshift/sippy), as summarized in the table above.
 
 The following changes are required:
  1. Ensuring the BigQuery query pattern covers the CI Operator Job (`pkg/variantregistry/ocp.go`: `LoadExpectedJobVariants()`).
@@ -280,7 +375,7 @@ For standard LP OCP Compat onboardings that follow the `periodic-ci-<org>-<repo>
 Commit all changes in a single PR against the `main` branch of [openshift/sippy](https://github.com/openshift/sippy).
 
 ----
-#### Prerequisites
+#### Sippy Prerequisites
 
 Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy), gather the following information.
 
@@ -425,16 +520,18 @@ var testSuitePatterns = []*regexp.Regexp{
 ### CI Test Mapping
 
 The steps in this section onboard a new LP as CR Component into [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping), which maps
-Test Suites (TS) to CR Components and Capabilities. Once mapped, each TC within the LP's TS appears in CR attributed to the correct Component.
+Test Suites (TS) to CR Components and Capabilities. Open a PR against [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping), as
+summarized in the table above. Once mapped, each TC within the LP's TS appears in CR attributed to the correct Component.
 
 ----
-#### Prerequisites
+#### ci-test-mapping Prerequisites
 
 Before opening a PR against [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping), verify the following.
- 1. **Stable TS string:** See [Sippy Prerequisites](#prerequisites-1), item 1.
+ 1. **Stable TS string:** See [Sippy Prerequisites](#sippy-prerequisites), item 1.
  2. **Valid `OCPBUGS` Jira Component:** The `.Component.DefaultJiraComponent` field in `pkg/components/<lpComp>/component.go` must correspond to a real Jira
-    Component in the [OCPBUGS](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) project. If the component does not yet exist, it can
-    be requested at [new OCPBUGS component request](https://devservices.dpp.openshift.com/support/new_ocpbugs_component/).
+    Component in the [OCPBUGS](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) project. The Jira Component name should follow the
+    pattern `LP--<LP-name>` (for example, `LP--My-product`). If the component does not yet exist, it can be requested at
+    [new OCPBUGS component request](https://devservices.dpp.openshift.com/support/new_ocpbugs_component/).
 
 ----
 #### Step 1 -- Register TS Name Pattern
@@ -636,100 +733,6 @@ make mapping
 
 Commit all changes in a single PR against the `main` branch of [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping).
 
-### CI Operator Job Configuration
-
-This section documents the changes required in [openshift/release](https://github.com/openshift/release) to make a CI Operator Job CR-compliant. This is the
-third PR required for LP OCP Compat onboarding. The `sippy` and `ci-test-mapping` PRs both depend on this configuration being in place and producing correct
-JUnit output before they take effect.
-
-The CI Operator Job Conf. must satisfy the following requirements:
- 1. **LayeredProduct compatibility:** The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()`
-    in Sippy correctly assigns the `LayeredProduct` CR Variant label.
- 2. **Test Mapping Prefix:** The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so
-    that JUnit output uses the correct `<testsuite name="...">` prefix.
- 3. **CI Operator Workflow:** Use the [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr) CI Operator Workflow where
-    applicable. This is the recommended workflow for LP OCP Compat CR onboarding; it wires the CI Operator Job to the correlated CR, Firewatch, and related
-    interop automations in one place.
- 4. **Schedule:** Set `.tests[].cron` to `0 3,15 * * *` (twice daily at 03:00 and 15:00 UTC). Component Readiness (CR) requires sufficiently frequent CI
-    Operator Job results to produce reliable health signals.
- 5. **Slack reporting:** If LP onboarding renames CI Operator Job test names (the `.tests[].as` value), modify the `.config.prowgen` `slack_reporter`
-    configuration in [openshift/release](https://github.com/openshift/release) so `job_names` or `job_name_patterns` reflect the new test names. See
-    [Set Up Slack Alerts for Job Results](https://docs.ci.openshift.org/docs/how-tos/notification/).
-
-----
-#### Job Name Pattern
-
-The CI Operator Job name is generated from the CI Operator Job Conf. file path and the `.tests[].as` value (the test's short Job name). Three possibilities
-cover the standard LP OCP Compat use cases, all producing the same `-<lpVer>-lp-ocp-compat-cr--<lpName>-` sub-string, satisfying the `setLayeredProduct()`
-sub-string match.
- 1. **Dedicated `lp-ocp-compat` CI Operator Job Conf. Variant file:**
-  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>-lp-ocp-compat.yaml`
-  - Set `.tests[].as: cr--<lpName>--<testVariants>`
- 2. **Existing Variant file with an `lp-ocp-compat-cr` test name:**
-  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>.yaml`
-  - Set `.tests[].as: lp-ocp-compat-cr--<lpName>--<testVariants>`
- 3. **LP hosts the job in its own CI Operator Job Conf. file:**
-  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>.yaml` (when the other two patterns cannot
-    be used as the file name).
-  - Set `.tests[].as: <lpVer>-lp-ocp-compat-cr--<lpName>--<testVariants>`
-
-**Note:**
-- The `<lpVer>` indicates the LP version being tested. Possible values:
-  - `lpGA`        --  LP General Availability version.
-  - `lpMainline`  --  LP mainline/development version.
-  - `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
-- The OCP release segment in the CI Operator Job name must use the `-ocp-<ocpRelease>-` form, with each segment separated by `-`. For example, use
-  `-ocp-4.22-`, not `-ocp4.22-`. Sippy does not pick up Job results when the release value is concatenated without the separating hyphen.
-
-----
-#### Ensuring JUnit XML TS Names Have Correct Prefix
-
-The following changes are required:
- 1. Set these two Environment Variables in the CI Operator Job Conf. file (`ci-operator/config/**/*.yaml`) inside the `.tests[].steps.env` block.
-    ```yaml
-     ...
-    tests:
-      - as: cr--my-product--aws
-        steps:
-          env:
-            MAP_TESTS: "true"
-            DR__RP__CR_COMP_NAME: lp-ocp-compat--My-product
-     ...
-    ```
-    **Note:**
-    - The value `lp-ocp-compat--My-product` becomes the `<testsuite name="...">` attribute in JUnit XML result files. This must satisfy the
-      [`testSuitePatterns`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go) RegEx pattern and the
-      [`includeSuitePatterns`](https://github.com/openshift-eng/ci-test-mapping/blob/main/config/openshift-eng.yaml) SQL `LIKE` pattern.
-    - `DR__RP__CR_COMP_NAME` must be set in this file whenever the Job executes the
-      [`mpiit-data-router-reporter`](https://github.com/openshift/release/blob/main/ci-operator/step-registry/mpiit/data-router-reporter/mpiit-data-router-reporter-commands.sh)
-      CI Operator Step (directly, or indirectly via a CI Operator Chain or CI Operator Workflow, such as [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr)), or the Job incorporates a Single-Stage Test (via
-      [`literal_step`](https://steps.ci.openshift.org/ci-operator-reference) stanza) performing an equivalent action.
- 2. In the CI Operator Step Script that performs the test and produces the JUnit XML result files (the post-processing helper is provided by
-    [RedHatQE/OpenShift-LP-QE--Tools](https://github.com/RedHatQE/OpenShift-LP-QE--Tools)):
-    ```bash
-    if [ "${MAP_TESTS}" = "true" ]; then
-        eval "$(
-            typeset -a _fURL=()
-            type -t wget 1>/dev/null && _fURL=(wget -qO-) || _fURL=(curl -fsSL)
-            "${_fURL[@]}" \
-    https://raw.githubusercontent.com/RedHatQE/OpenShift-LP-QE--Tools/refs/heads/main/libs/bash/ci-operator/interop/common/ExitTrap--PostProcessPrep.sh
-        )"; trap '
-            LP_IO__ET_PPP__NEW_TS_NAME="${DR__RP__CR_COMP_NAME}--%s" \
-                ExitTrap--PostProcessPrep junit--<testName>.xml
-        ' EXIT
-    fi
-    ```
-    **Note:**
-    - This script can either be in CI Operator Step Script or the CI Operator Job Conf. file `.tests[].steps.test[].commands` block.
-    - Ensure `MAP_TESTS` and `DR__RP__CR_COMP_NAME` are declared in the `.ref.env` block of the Step's CI Operator Step Conf. file
-      (`ci-operator/step-registry/**/*-ref.yaml`).
-    - The `<testName>` must be unique within the CI Operator Step; consult the Step author for the correct value (preferred), or alternatively use the
-      `.ref.as` value from the CI Operator Step Conf. file.
-
-Commit the CI Operator Job Conf. file change in a PR against the `main` branch of [openshift/release](https://github.com/openshift/release) (for example,
-`ci-operator/config/myorg/myrepo/myorg-myrepo-main-lpGA-lp-ocp-compat.yaml`).
-
-----
 ### Verification
 
 After all three PRs are merged, navigate to the CR LP OCP Compat View for the target OCP release (for example,
