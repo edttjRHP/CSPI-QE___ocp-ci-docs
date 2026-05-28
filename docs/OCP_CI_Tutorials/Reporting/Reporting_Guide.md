@@ -308,16 +308,16 @@ Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy
 
 **File:** [pkg/variantregistry/ocp.go](https://github.com/openshift/sippy/blob/main/pkg/variantregistry/ocp.go)
 
-**Variable:** `jobPatterns` in function `LoadExpectedJobVariants()`
+**Variable:** `prowjob_job_name` in function `LoadExpectedJobVariants()`
 
-Sippy populates its variant data from a BigQuery query that is scoped to CI Operator Job names matching one of the patterns in `jobPatterns`. The following
+Sippy populates its variant data from a BigQuery query that is scoped to CI Operator Job names matching one of the patterns in `prowjob_job_name`. The following
 pattern is already present in the codebase and covers all standard LP OCP Compat Job names:
 ```
 "periodic-ci-%%-lp-ocp-compat-%%"
 ```
 
 **Note:**
-- A new entry in `jobPatterns` is needed only when the CI Operator Job name does not match any existing pattern. For standard LP OCP Compat jobs following the
+- A new entry in `prowjob_job_name` is needed only when the CI Operator Job name does not match any existing pattern. For standard LP OCP Compat jobs following the
   `periodic-ci-<org>-<repo>-<some-variants>-<lpVer>-lp-ocp-compat-cr--<lpName>--<other-test-variants>` naming convention, the existing
   `"periodic-ci-%%-lp-ocp-compat-%%"` pattern already matches; skip this step.
 
