@@ -673,10 +673,13 @@ sub-string match.
     be used as the file name).
   - Set `.tests[].as: <lpVer>-lp-ocp-compat-cr--<lpName>--<testVariants>`
 
-**Note:** The `<lpVer>` indicates the LP version being tested. Possible values:
-- `lpGA`        --  LP General Availability version.
-- `lpMainline`  --  LP mainline/development version.
-- `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
+**Note:**
+- The `<lpVer>` indicates the LP version being tested. Possible values:
+  - `lpGA`        --  LP General Availability version.
+  - `lpMainline`  --  LP mainline/development version.
+  - `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
+- The OCP release segment in the CI Operator Job name must use the `-ocp-<ocpRelease>-` form, with each segment separated by `-`. For example, use
+  `-ocp-4.22-`, not `-ocp4.22-`. Sippy does not pick up Job results when the release value is concatenated without the separating hyphen.
 
 ----
 #### Ensuring JUnit XML TS Names Have Correct Prefix
