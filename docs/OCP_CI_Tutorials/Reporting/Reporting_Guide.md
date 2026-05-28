@@ -201,8 +201,9 @@ Onboarding an LP OCP Compatibility (LP OCP Compat) Job into CR requires three pu
 | [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping) | `config/openshift-eng.yaml`, `pkg/components/<lpComp>/component.go`, `pkg/components/<lpComp>/capabilities.go`, `pkg/registry/registry.go`, regenerated `mapping.json`    |
 
 The three PRs are independent of each other and can be opened in parallel. The Sippy and ci-test-mapping PRs both depend on the CI Operator Job already being
-CR-compliant and producing JUnit XML with the correct TS name prefix (see [Prerequisites](#prerequisites)). Do not open the Sippy or ci-test-mapping PR until
-the job is confirmed to be producing the expected JUnit output. All three must be merged before LP test results appear correctly in CR. For an example, see
+CR-compliant and producing JUnit XML with the correct TS name prefix (see [Prerequisites](#prerequisites)). It is recommended to determine the correct JUnit
+output to be produced by the `openshift/release` PR first, as this directly affects the content of the other two PRs. All three must be merged before LP test
+results appear correctly in CR. For an example, see
 [pkg/components/quaylpinterop/](https://github.com/openshift-eng/ci-test-mapping/tree/main/pkg/components/quaylpinterop/) in `ci-test-mapping`.
 
 ### Prerequisites
@@ -211,16 +212,16 @@ Complete the following before opening the Sippy or ci-test-mapping PR.
 
  1. **Make the CI Operator Job CR-compliant.** This is a hard prerequisite; neither the Sippy PR nor the ci-test-mapping PR will be effective without it. CI
     Operator Job Conf. is documented in the [CI Operator Job Configuration](#ci-operator-job-configuration) section. The job must produce JUnit XML with the
-    `DR__RP__CR_COMP_NAME` value (`lp-ocp-compat--<lpName>`) as the `<testsuite name="...">` attribute.
+    `DR__RP__CR_COMP_NAME` value (`lp-ocp-compat--<LP-name>`) as the `<testsuite name="...">` attribute.
 
     To verify: JUnit XML files from a CI Operator Job Run are in the Prow Job Artifacts directory, accessible via the "Artifacts" link on the Prow Job page (a
     Prow Job page is the web UI page for a single CI Operator Job Run, accessible from [prow.ci.openshift.org](https://prow.ci.openshift.org) by searching for
     the job name or via a link in a GitHub Pull Request's CI Status Checks; each run page shows an "Artifacts" link that leads to a browsable artifact
     directory tree, with JUnit XML files located under the sub-directory for the Test Step, for example, `artifacts/<jobShortName>/<stepName>/artifacts/`).
-    Open the JUnit XML files and confirm that each `<testsuite name="...">` begins with the expected `lp-ocp-compat--<lpName>` prefix.
+    Open the JUnit XML files and confirm that each `<testsuite name="...">` begins with the expected `lp-ocp-compat--<LP-name>` prefix.
 
  2. Have the LP name and the [`OCPBUGS`](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) Jira Component name ready before proceeding.
-    The Jira Component name should follow the pattern `LP--<lpName>` (for example, `LP--my-product`); this value is used as `.Component.DefaultJiraComponent`
+    The Jira Component name should follow the pattern `LP--<LP-name>` (for example, `LP--My-product`); this value is used as `.Component.DefaultJiraComponent`
     in `pkg/components/<lpComp>/component.go`.
 
 ### General Information
@@ -285,7 +286,7 @@ Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy
 
  1. **TS name prefix:** Identify the TS name prefix present in the JUnit results produced by the CI Operator Job. The JUnit XML files are in the Prow Job
     Artifacts directory, accessible via the "Artifacts" link on the Prow Job page, under the Test Step directory. Look for `<testsuite name="...">` elements;
-    the `name` attribute is the prefix Sippy matches against. To establish a consistent prefix, set `DR__RP__CR_COMP_NAME` to `lp-ocp-compat--<lpName>` in the
+    the `name` attribute is the prefix Sippy matches against. To establish a consistent prefix, set `DR__RP__CR_COMP_NAME` to `lp-ocp-compat--<LP-name>` in the
     CI Operator Job Conf. (see [Prerequisites](#prerequisites), item 1).
 
  2. **Stable CI Operator Job name sub-string:** All CI Operator Job Conf. files live in [openshift/release](https://github.com/openshift/release/), under
@@ -297,7 +298,7 @@ Before opening a PR against [openshift/sippy](https://github.com/openshift/sippy
     (for example, `lp-ocp-compat`) as a grep keyword. Job names follow the format `periodic-ci-<org>-<repo>-<branch>-<some-variants>-<testname>`. Identify a
     "stable sub-string" of that name: a part that does not include the OCP release number or branch name and is therefore present regardless of the OCP version
     being tested. For example, given the job name `periodic-ci-myorg-myrepo-v1.2-ocp4.22-lpGA-lp-ocp-compat-cr--my-product--aws`, the segments `v1.2` (branch)
-    and `ocp4.22` (OCP version as part of CI Operator Job Variant) change per release. The stable sub-string is `-lpga-lp-ocp-compat-cr--my-product-`
+    and `ocp4.22` (OCP version as part of CI Operator Job Variant) change per release. The stable sub-string is `-lpga-lp-ocp-compat-cr--my-product--`
     (lower-cased, because the Registry matches against the lower-cased CI Operator Job full name) because it is present in all CI Operator Job Variants. The CR
     Variant (which is a different concept from CI Operator Job Variant) Registry matches literal sub-strings against the lower-cased CI Operator Job full name;
     the first matching entry in `layeredProductPatterns` wins.
@@ -350,7 +351,7 @@ The `setLayeredProduct()` function assigns the CR Variant `LayeredProduct` value
 patterns are scanned top to bottom; the first matching entry wins.
 ```go
 // {sub-string, product}
-{"-lpga-lp-ocp-compat-cr--my-product-", "lp-ocp-compat--my-product--lpGA"},
+{"-lpga-lp-ocp-compat-cr--my-product--", "lp-ocp-compat--my-product--lpGA"},
 ```
 
 **Placement:** Insert a new row in the appropriate position. If the sub-string does not overlap with any existing entry, placing it at the end is safe. If it
@@ -416,7 +417,7 @@ var testSuitePatterns = []*regexp.Regexp{
 
 **Note:**
 - A new `regexp.MustCompile(...)` entry is needed only when the CI Operator Job produces a TS name prefix family not covered by any existing pattern. For
-  standard LP OCP Compat onboardings where TS names follow the `lp-ocp-compat--<lpName>--` prefix convention (see [Ensuring JUnit XML TS Names Have Correct
+  standard LP OCP Compat onboardings where TS names follow the `lp-ocp-compat--<LP-name>--` prefix convention (see [Ensuring JUnit XML TS Names Have Correct
   Prefix](#ensuring-junit-xml-ts-names-have-correct-prefix)), the existing `^lp-ocp-compat--` RegEx pattern already covers the TS names; skip this step in that
   case.
 
@@ -453,7 +454,7 @@ any character sequence. This pattern matches `lp-ocp-compat--lp-product-a` and `
 
 **Note:**
 - A new entry is needed only when no existing pattern covers the LP TS names. For standard LP OCP Compat onboardings where TS names follow the
-  `lp-ocp-compat--<lpName>--` prefix convention (set via `DR__RP__CR_COMP_NAME`, see [Ensuring JUnit XML TS Names Have Correct
+  `lp-ocp-compat--<LP-name>--` prefix convention (set via `DR__RP__CR_COMP_NAME`, see [Ensuring JUnit XML TS Names Have Correct
   Prefix](#ensuring-junit-xml-ts-names-have-correct-prefix)), the existing `"lp-ocp-compat--%"` SQL `LIKE` pattern already covers them; skip this step in that
   case.
 - Insert the new entry in alphabetical order alongside the existing entries.
@@ -472,20 +473,23 @@ native OCP CR Component packages that share the same repository. The directory m
 example.
 
 The file defines the CR Component Struct, its name, the Jira Component, and the TS matchers:
-- `.Component.Name`: The CR Component identifier string, by convention is passed to
+- `.Component.Name`: The CR Component Display Name, by convention is passed to
   [`r.Register()`](https://github.com/openshift-eng/ci-test-mapping/blob/main/pkg/registry/registry.go) as its first parameter. The `Name` string is displayed
-  as the CR Component label in the CR Dashboard. Use the `lp--<lpName>` form (for example, `lp--my-product`).
+  as the CR Component label in the CR Dashboard. Use the `LP--<LP-name>` form (for example, `LP--My-product`).
 - `.Component.DefaultJiraComponent`: The [`OCPBUGS`](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) Jira Component name, following
-  the pattern `LP--<lpName>` (for example, `LP--my-product`). Run `./ci-test-mapping jira-verify` (see Note below) to confirm this value resolves to a real
-  Jira Component before opening the PR.
+  the pattern `LP--<LP-name>` (for example, `LP--My-product`). Run `./ci-test-mapping jira-verify` (see Note below) to confirm this value resolves to a real
+  Jira Component before opening the PR. By convention this should match the above `.Component.Name`.
 - `.Component.Matchers`: Defines the TC ownership matching rules for this Component.
   - `.Component.Matchers[].SuiteRegEx`: Matches a RegEx pattern against the TS name. Use this for the standard LP TS prefixes (`^lp-ocp-compat--my-product--`,
     `^lp-interop--my-product--`, `^lp-chaos--my-product--`).
 
 Boilerplate:
+> **Instructions:**
+> - Replace the following placeholders:
+>   - `lpmyproduct`: lp-prefixed lower-cased Go Package name.
+>   - `myproduct`: non-hyphenated lower-cased product name.
+>   - `My-product`: hyphenated capitalized on first letter product name.
 ```go
-// Replace `lpmyproduct` with the lp-prefixed Go Package name, and `my-product` with the hyphenated product name.
-
 package lpmyproduct
 
 import (
@@ -499,13 +503,13 @@ type Component struct {
     *config.Component
 }
 
-var LP_lpmyproduct_Component = Component{
+var LPmyproductComponent = Component{
     Component: &config.Component{
-        Name:                 "lp--my-product",
+        Name:                 "LP--My-product",
         Operators:            []string{},
-        DefaultJiraComponent: "LP--my-product",
+        DefaultJiraComponent: "LP--My-product",
         Matchers: []config.ComponentMatcher{
-            {SuiteRegEx: regexp.MustCompile(`^lp-ocp-compat--my-product--`)},
+            {SuiteRegEx: regexp.MustCompile(`^lp-ocp-compat--My-product--`)},
         },
     },
 }
@@ -571,6 +575,9 @@ The file defines the CR Component Capabilities:
 - The default Capabilities are sufficient.
 
 Boilerplate:
+> **Instructions:**
+> - Replace the following placeholder:
+>   - `lpmyproduct`: lp-prefixed lower-cased Go Package name.
 ```go
 package lpmyproduct
 
@@ -593,6 +600,13 @@ func identifyCapabilities(test *v1.TestInfo) []string {
 **Function:** `NewComponentRegistry()`
 
 Add the import and `Register` call alongside the other LP Component registrations:
+
+Boilerplate:
+> **Instructions:**
+> - Replace the following placeholders:
+>   - `lpmyproduct`: lp-prefixed lower-cased Go Package name.
+>   - `myproduct`: non-hyphenated lower-cased product name.
+>   - `My-product`: hyphenated capitalized on first letter product name.
 ```go
 package registry
 
@@ -604,7 +618,7 @@ import (
  ...
 func NewComponentRegistry() *Registry {
  ...
-    r.Register("lp--my-product", &lpmyproduct.LP_lpmyproduct_Component)
+    r.Register("LP--My-product", &lpmyproduct.LPmyproductComponent)
  ...
 }
 ```
@@ -630,7 +644,7 @@ JUnit output before they take effect.
 The CI Operator Job Conf. must satisfy two requirements:
  1. The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()` in Sippy correctly
     assigns the `LayeredProduct` CR Variant label.
- 2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<lpName>` in the `.tests[].steps.env` block so that JUnit output uses the
+ 2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so that JUnit output uses the
     correct `<testsuite name="...">` prefix.
 
 ----
@@ -667,13 +681,17 @@ The following changes are required:
         steps:
           env:
             MAP_TESTS: "true"
-            DR__RP__CR_COMP_NAME: lp-ocp-compat--my-product
+            DR__RP__CR_COMP_NAME: lp-ocp-compat--My-product
      ...
     ```
     **Note:**
-    - The value `lp-ocp-compat--my-product` becomes the `<testsuite name="...">` attribute in JUnit XML result files. This must satisfy the
+    - The value `lp-ocp-compat--My-product` becomes the `<testsuite name="...">` attribute in JUnit XML result files. This must satisfy the
       [`testSuitePatterns`](https://github.com/openshift/sippy/blob/main/pkg/db/suites.go) RegEx pattern and the
       [`includeSuitePatterns`](https://github.com/openshift-eng/ci-test-mapping/blob/main/config/openshift-eng.yaml) SQL `LIKE` pattern.
+    - `DR__RP__CR_COMP_NAME` must be set in this file whenever the Job executes the
+      [`mpiit-data-router-reporter`](https://github.com/openshift/release/blob/main/ci-operator/step-registry/mpiit/data-router-reporter/mpiit-data-router-reporter-commands.sh)
+      CI Operator Step (directly, or indirectly via a CI Operator Chain or CI Operator Workflow), or the Job incorporates a Single-Stage Test (via
+      [`literal_step`](https://steps.ci.openshift.org/ci-operator-reference) stanza) performing an equivalent action.
  2. In the CI Operator Step Script that performs the test and produces the JUnit XML result files (the post-processing helper is provided by
     [RedHatQE/OpenShift-LP-QE--Tools](https://github.com/RedHatQE/OpenShift-LP-QE--Tools)):
     ```bash
@@ -691,6 +709,10 @@ The following changes are required:
     ```
     **Note:**
     - This script can either be in CI Operator Step Script or the CI Operator Job Conf. file `.tests[].steps.test[].commands` block.
+    - Ensure `MAP_TESTS` and `DR__RP__CR_COMP_NAME` are declared in the `.ref.env` block of the Step's CI Operator Step Conf. file
+      (`ci-operator/step-registry/**/*-ref.yaml`).
+    - The `<testName>` must be unique within the CI Operator Step; consult the Step author for the correct value (preferred), or alternatively use the
+      `.ref.as` value from the CI Operator Step Conf. file.
 
 Commit the CI Operator Job Conf. file change in a PR against the `main` branch of [openshift/release](https://github.com/openshift/release) (for example,
 `ci-operator/config/myorg/myrepo/myorg-myrepo-main-lpGA-lp-ocp-compat.yaml`).
