@@ -329,7 +329,8 @@ The following changes are required:
       [`includeSuitePatterns`](https://github.com/openshift-eng/ci-test-mapping/blob/main/config/openshift-eng.yaml) SQL `LIKE` pattern.
     - `DR__RP__CR_COMP_NAME` must be set in this file whenever the Job executes the
       [`mpiit-data-router-reporter`](https://github.com/openshift/release/blob/main/ci-operator/step-registry/mpiit/data-router-reporter/mpiit-data-router-reporter-commands.sh)
-      CI Operator Step (directly, or indirectly via a CI Operator Chain or CI Operator Workflow, such as [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr)), or the Job incorporates a Single-Stage Test (via
+      CI Operator Step (directly, or indirectly via a CI Operator Chain or CI Operator Workflow, such as
+      [`firewatch-ipi-aws-cr`](https://steps.ci.openshift.org/workflow/firewatch-ipi-aws-cr)), or the Job incorporates a Single-Stage Test (via
       [`literal_step`](https://steps.ci.openshift.org/ci-operator-reference) stanza) performing an equivalent action.
  2. In the CI Operator Step Script that performs the test and produces the JUnit XML result files (the post-processing helper is provided by
     [RedHatQE/OpenShift-LP-QE--Tools](https://github.com/RedHatQE/OpenShift-LP-QE--Tools)):
