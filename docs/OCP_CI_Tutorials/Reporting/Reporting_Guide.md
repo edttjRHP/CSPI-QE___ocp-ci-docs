@@ -301,8 +301,8 @@ The CI Operator Job Conf. must satisfy three requirements:
     assigns the `LayeredProduct` CR Variant label.
  2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so that JUnit output uses the
     correct `<testsuite name="...">` prefix.
- 3. The `.tests[].cron` value must schedule the CI Operator Job to run at least twice per day. Component Readiness (CR) requires a minimum of two daily result
-    samples for its statistical formula to reach sufficiently high confidence; a once-daily schedule does not meet that threshold.
+ 3. The CI Operator job MUST run at least twice per day. CR requires a certain minimum set of samples for its statistical formula to reach a sufficiently high
+    confidence level.
 
 ----
 
