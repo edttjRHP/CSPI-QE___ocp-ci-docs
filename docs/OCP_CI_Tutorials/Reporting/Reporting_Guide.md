@@ -653,7 +653,6 @@ Boilerplate:
 >   - `myproduct`: non-hyphenated lower-cased product name.
 >   - `My-product`: hyphenated capitalized on first letter product name.
 >   - `LPmyproductComponent`: compound string `'LP' + {myproduct} + 'Component'`; for `{myproduct}` placeholder, see above.
->     not `LPMpexoperatorComponent`).
 >
 ```go
 package lpmyproduct
@@ -782,7 +781,6 @@ Boilerplate:
 >   - `myproduct`: non-hyphenated lower-cased product name.
 >   - `My-product`: hyphenated capitalized on first letter product name.
 >   - `LPmyproductComponent`: compound string `'LP' + {myproduct} + 'Component'`; for `{myproduct}` placeholder, see above.
->     not `LPMpexoperatorComponent`).
 >
 ```go
 package registry
