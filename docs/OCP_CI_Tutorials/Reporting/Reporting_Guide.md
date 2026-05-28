@@ -652,7 +652,7 @@ Boilerplate:
 >   - `lpmyproduct`: lp-prefixed lower-cased Go Package name.
 >   - `myproduct`: non-hyphenated lower-cased product name.
 >   - `My-product`: hyphenated capitalized on first letter product name.
->   - `LPmyproductComponent`: exported var name; `LP` + `myproduct` + `Component` with no acronym capitalization (for `MPEX-operator`, `LPmpexoperatorComponent`,
+>   - `LPmyproductComponent`: compound string `'LP' + {myproduct} + 'Component'`; for `{myproduct}` placeholder, see above.
 >     not `LPMpexoperatorComponent`).
 >
 ```go
@@ -781,7 +781,7 @@ Boilerplate:
 >   - `lpmyproduct`: lp-prefixed lower-cased Go Package name.
 >   - `myproduct`: non-hyphenated lower-cased product name.
 >   - `My-product`: hyphenated capitalized on first letter product name.
->   - `LPmyproductComponent`: exported var name; `LP` + `myproduct` + `Component` with no acronym capitalization (for `MPEX-operator`, `LPmpexoperatorComponent`,
+>   - `LPmyproductComponent`: compound string `'LP' + {myproduct} + 'Component'`; for `{myproduct}` placeholder, see above.
 >     not `LPMpexoperatorComponent`).
 >
 ```go
