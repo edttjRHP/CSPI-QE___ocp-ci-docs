@@ -270,12 +270,14 @@ This section documents the changes required in [openshift/release](https://githu
 in the table above. The [openshift/sippy](https://github.com/openshift/sippy) and [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping)
 PRs both depend on this configuration being in place and producing correct JUnit output before they take effect.
 
-The CI Operator Job Conf. must satisfy two requirements:
+The CI Operator Job Conf. must satisfy three requirements:
 
  1. The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()` in Sippy correctly
     assigns the `LayeredProduct` CR Variant label.
  2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so that JUnit output uses the
     correct `<testsuite name="...">` prefix.
+ 3. The `.tests[].cron` value must schedule the CI Operator Job to run at least twice per day. Component Readiness (CR) requires a minimum of two daily result
+    samples for its statistical formula to reach sufficiently high confidence; a once-daily schedule does not meet that threshold.
 
 ----
 
