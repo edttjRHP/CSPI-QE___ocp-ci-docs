@@ -13,6 +13,7 @@
     - [Example](#example)
   - [How To Add Jira Reporting to a Scenario](#how-to-add-jira-reporting-to-a-scenario)
 - [Component Readiness](#component-readiness)
+  - [Onboarding Inputs](#onboarding-inputs)
   - [Summary](#summary)
   - [Prerequisites](#prerequisites)
   - [General Information](#general-information)
@@ -191,6 +192,29 @@ Product (LP)). LP is any Red Hat product that is tested for compatibility with O
 appear in CR once the job is registered in both [openshift/sippy](https://github.com/openshift/sippy/) and
 [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping). Individual Test Cases (TC) that appear within those TSs are mapped to CR
 Components and Capabilities by `ci-test-mapping`.
+
+### Onboarding Inputs
+
+Placeholders in this section use the worked examples below; see [Summary](#summary) for the three PRs.
+
+| Input                                                 | Worked Example                                                                    |
+|-------------------------------------------------------|-----------------------------------------------------------------------------------|
+| LP Product Name                                       | `My-product`                                                                      |
+| LP Name Slug (`<lpName>`)                             | `my-product`                                                                      |
+| Layered Product Version (`<lpVer>`)                   | `lpGA`                                                                            |
+| OpenShift Release (`<ocpRelease>`)                    | `4.22`                                                                            |
+| LP test repo Org / Repo (`<lpOrg>` / `<lpRepo>`)      | `myorg` / `myrepo`                                                                |
+| LP Branch (`<lpBranch>`)                              | `main`                                                                            |
+| CI Operator Job Conf. Test Variant (`<testVariants>`) | `aws`                                                                             |
+| Jira Component Name                                   | `LP--My-product`                                                                  |
+| CI Operator Job Conf. file                            | `ci-operator/config/myorg/myrepo/myorg-myrepo-main__lpGA-lp-ocp-compat.yaml`      |
+| CI Operator Job Conf. `.tests[].as`                   | `cr--my-product--aws`                                                             |
+| CI Operator Job Conf. `DR__RP__CR_COMP_NAME`          | `lp-ocp-compat--My-product`                                                       |
+| ci-test-mapping Go package (`<lpComp>`)               | `lpmyproduct`                                                                     |
+| CR Variant `LayeredProduct`                           | `lp-ocp-compat--my-product--lpGA`                                                 |
+| Sippy `layeredProductPatterns` sub-string             | `-lpga-lp-ocp-compat-cr--my-product--`                                            |
+| Periodic CI Operator Job name                         | `periodic-ci-myorg-myrepo-main-ocp-4.22-lpGA-lp-ocp-compat-cr--my-product--aws`   |
+| CR View identifier (`view=`)                          | `4.22-LP-OCP-Compat--lpGA`                                                        |
 
 ### Summary
 
