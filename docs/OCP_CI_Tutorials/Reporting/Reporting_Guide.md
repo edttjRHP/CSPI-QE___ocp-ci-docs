@@ -433,7 +433,8 @@ Test Suites (TS) to CR Components and Capabilities. Once mapped, each TC within 
 Before opening a PR against [openshift-eng/ci-test-mapping](https://github.com/openshift-eng/ci-test-mapping), verify the following.
  1. **Stable TS string:** See [Sippy Prerequisites](#prerequisites-1), item 1.
  2. **Valid `OCPBUGS` Jira Component:** The `.Component.DefaultJiraComponent` field in `pkg/components/<lpComp>/component.go` must correspond to a real Jira
-    Component in the [OCPBUGS](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) project.
+    Component in the [OCPBUGS](https://redhat.atlassian.net/jira/software/c/projects/OCPBUGS/components) project. If the component does not yet exist, it can
+    be requested at [new OCPBUGS component request](https://devservices.dpp.openshift.com/support/new_ocpbugs_component/).
 
 ----
 #### Step 1 -- Register TS Name Pattern
