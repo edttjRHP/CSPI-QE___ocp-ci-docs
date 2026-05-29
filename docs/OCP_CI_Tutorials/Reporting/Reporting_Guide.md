@@ -197,25 +197,27 @@ Components and Capabilities by `ci-test-mapping`.
 
 Placeholders in this section use the worked examples below.
 
-| Input                                                 | Worked Example                                                                    |
-|-------------------------------------------------------|-----------------------------------------------------------------------------------|
-| LP Product Name (`<LP-name>`)                         | `My-product`                                                                      |
-| LP Name Slug (`<lpName>`)                             | `my-product`                                                                      |
-| LP Upstream Test Repo (`<lpOrg>/<lpRepo>`)            | `myorg/myrepo`                                                                    |
-| LP Upstream Test Repo Branch (`<lpBranch>`)           | `main`                                                                            |
-| Layered Product Version (`<lpVer>`)                   | `lpGA`                                                                            |
-| OpenShift Release (`<ocpRelease>`)                    | `4.22`                                                                            |
-| CI Operator Job Conf. file                            | `ci-operator/config/myorg/myrepo/myorg-myrepo-main__lpGA-lp-ocp-compat.yaml`      |
-| CI Operator Job Conf. Test Variant (`<testVariants>`) | `aws`                                                                             |
-| CI Operator Job Conf. `.tests[].as`                   | `cr--my-product--aws`                                                             |
-| CI Operator Job Conf. `DR__RP__CR_COMP_NAME`          | `lp-ocp-compat--My-product`                                                       |
-| CR Variant `LayeredProduct`                           | `lp-ocp-compat--my-product--lpGA`                                                 |
-| Sippy `layeredProductPatterns` sub-string             | `-lpga-lp-ocp-compat-cr--my-product--`                                            |
-| Periodic CI Operator Job name                         | `periodic-ci-myorg-myrepo-main-ocp-4.22-lpGA-lp-ocp-compat-cr--my-product--aws`   |
-| CR View identifier (`view=`)                          | `4.22-LP-OCP-Compat--lpGA`                                                        |
-| CR Component Go package (`<lpComp>`)                  | `lpmyproduct`                                                                     |
-| Jira Component name                                   | `LP--My-product`                                                                  |
-| TS prefix                                             | `lp-ocp-compat--My-product`                                                       |
+| Input                                                                 | Worked Example                                                                        |
+|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| LP Product Name (`<LP-name>`)                                         | `My-product`                                                                          |
+| LP Name Slug (`<lpName>`)                                             | `my-product`                                                                          |
+| LP Upstream Test Repo (`<lpOrg>/<lpRepo>`)                            | `myorg/myrepo`                                                                        |
+| LP Upstream Test Repo Branch (`<lpBranch>`)                           | `main`                                                                                |
+| Layered Product Version (`<lpVer>`)                                   | `lpGA`                                                                                |
+| OpenShift Release (`<ocpRelease>`)                                    | `4.22`                                                                                |
+| CI Operator Job Conf. file                                            | `ci-operator/config/myorg/myrepo/myorg-myrepo-main__ocp-4.22-lpGA-lp-ocp-compat.yaml` |
+| CI Operator Job Conf. File Variant (`<ciCfgVariant>`)                 | `ocp-4.22-lpGA-lp-ocp-compat`                                                         |
+| CI Operator Job Conf. preceding sub-Variants (`<precedingVariants>`)  | `ocp-4.22`                                                                            |
+| CI Operator Job Conf. Test Variant (`<testVariants>`)                 | `aws`                                                                                 |
+| CI Operator Job Conf. `.tests[].as`                                   | `cr--my-product--aws`                                                                 |
+| CI Operator Job Conf. `DR__RP__CR_COMP_NAME`                          | `lp-ocp-compat--My-product`                                                           |
+| CR Variant `LayeredProduct`                                           | `lp-ocp-compat--my-product--lpGA`                                                     |
+| Sippy `layeredProductPatterns` sub-string                             | `-lpga-lp-ocp-compat-cr--my-product--`                                                |
+| Periodic CI Operator Job name                                         | `periodic-ci-myorg-myrepo-main-ocp-4.22-lpGA-lp-ocp-compat-cr--my-product--aws`       |
+| CR View identifier (`view=`)                                          | `4.22-LP-OCP-Compat--lpGA`                                                            |
+| CR Component Go package (`<lpComp>`)                                  | `lpmyproduct`                                                                         |
+| Jira Component name                                                   | `LP--My-product`                                                                      |
+| TS prefix                                                             | `lp-ocp-compat--My-product`                                                           |
 
 ### Summary
 
@@ -297,7 +299,7 @@ PRs both depend on this configuration being in place and producing correct JUnit
 
 The CI Operator Job Conf. must satisfy three requirements:
 
- 1. The generated CI Operator Job name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()` in Sippy correctly
+ 1. The generated CI Operator Job full name must contain the sub-string `-<lpVer>-lp-ocp-compat-cr--<lpName>-` so that `setLayeredProduct()` in Sippy correctly
     assigns the `LayeredProduct` CR Variant label.
  2. The `DR__RP__CR_COMP_NAME` Environment Variable must be set to `lp-ocp-compat--<LP-name>` in the `.tests[].steps.env` block so that JUnit output uses the
     correct `<testsuite name="...">` prefix.
@@ -308,24 +310,32 @@ The CI Operator Job Conf. must satisfy three requirements:
 
 #### Job Name Pattern
 
-The CI Operator Job name is generated from the CI Operator Job Conf. file path and the `.tests[].as` value (the test's short Job name). Three possibilities
-cover the standard LP OCP Compat use cases, all producing the same `-<lpVer>-lp-ocp-compat-cr--<lpName>-` sub-string, satisfying the `setLayeredProduct()`
-sub-string match.
+The CI Operator Job name is generated from the CI Operator Job Conf. file name and the `.tests[].as` value (the test's short Job name). The CI Operator Job
+Conf. file name **MUST** adhere to the strict
+[CI Operator Job Conf. file naming rule]( https://docs.ci.openshift.org/docs/how-tos/contributing-openshift-release/#variants), i.e. in the form of
+`ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<ciCfgVariant>.yaml`. The `<ciCfgVariant>` is the **WHOLE** segment after `__`. In the LP
+OCP Compat case, it takes the form `<precedingVariants>-<lpVer>-lp-ocp-compat`, where `<precedingVariants>` **MUST** at minimum contain the OCP Release segment
+(e.g. `ocp-4.22`) and may include additional sub-Variants that Sippy uses to set other CR Variant types (e.g. `Platform`, `Network`, `Architecture`). Since CR
+Variants are set via a simple sub-string match on the generated full CI Operator Job name, it is a **HARD** requirement that the generated CI Operator Job name
+contains a non-ambiguous sub-string pattern that **ONLY** matches this CI Operator Job.
+
+Three possibilities cover the standard LP OCP Compat use cases, all producing the same `-<lpVer>-lp-ocp-compat-cr--<lpName>-` sub-string, satisfying the
+`setLayeredProduct()` sub-string match.
 
  1. **Dedicated `lp-ocp-compat` CI Operator Job Conf. Variant file:**
 
-  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>-lp-ocp-compat.yaml`
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<precedingVariants>-<lpVer>-lp-ocp-compat.yaml`
   - Set `.tests[].as: cr--<lpName>--<testVariants>`
 
  2. **Existing Variant file with an `lp-ocp-compat-cr` test name:**
 
-  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>-<lpVer>.yaml`
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<precedingVariants>-<lpVer>.yaml`
   - Set `.tests[].as: lp-ocp-compat-cr--<lpName>--<testVariants>`
 
  3. **LP hosts the job in its own CI Operator Job Conf. file:**
 
-  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<lpVariants>.yaml` (when the other two patterns cannot
-    be used as the file name).
+  - CI Operator Job Conf. file path: `ci-operator/config/<lpOrg>/<lpRepo>/<lpOrg>-<lpRepo>-<lpBranch>__<precedingVariants>.yaml` (when the other two patterns
+    cannot be used as the file name).
   - Set `.tests[].as: <lpVer>-lp-ocp-compat-cr--<lpName>--<testVariants>`
 
 **Note:**
@@ -335,6 +345,8 @@ sub-string match.
   - `lpMainline`  --  LP mainline/development version.
   - `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
 - The OCP Release segment in the CI Operator Job name **MUST** follow the `-ocp-<ocpRelease>-` form (for example, `-ocp-4.22-`).
+- The `<testVariants>` is a free-form suffix chosen by the LP team to distinguish tests within the same CI Operator Job Conf. file (e.g. by platform or
+  scenario).
 
 ----
 
@@ -389,7 +401,7 @@ The following changes are required:
       `.ref.as` value from the CI Operator Step Conf. file.
 
 Commit the CI Operator Job Conf. file change in a PR against the `main` branch of [openshift/release](https://github.com/openshift/release) (for example,
-`ci-operator/config/myorg/myrepo/myorg-myrepo-main-lpGA-lp-ocp-compat.yaml`).
+`ci-operator/config/myorg/myrepo/myorg-myrepo-main__ocp-4.22-lpGA-lp-ocp-compat.yaml`).
 
 ----
 
