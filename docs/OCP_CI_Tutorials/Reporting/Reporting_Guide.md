@@ -37,7 +37,7 @@ Please see the following resources for more information about TestGrid:
 
 We have been able to eliminate a manual process for reporting CI Operator Jobs to TestGrid. The most important thing to know about how CI Operator Jobs are reported to the `-lp-interop` dashboards in TestGrid is that the automation that makes it happen looks for the unique identifier `-lp-interop` in the name of the Prow job.
 
-As you may have read in other documents in this repository, you will need to append `-lp-interop` to the end of of your configuration file's filename when you create it. When we create configuration files in OpenShift CI, as you may know, the format for the filenames is `{GitHub Organization}-{GitHub Repository}-{Branch}__****.yaml`. After the `{Branch}` section of the filename, anything can be appended to the end. The text appended to the end is called a "variant". The use of variants will come in handy if we test multiple versions of a layered product or of OpenShift. Please add `-lp-interop` to the "variant" section of the filename.
+As you may have read in other documents in this repository, you will need to append `-lp-interop` to the end of your configuration file's filename when you create it. When we create configuration files in OpenShift CI, as you may know, the format for the filenames is `{GitHub Organization}-{GitHub Repository}-{Branch}__****.yaml`. After the `{Branch}` section of the filename, anything can be appended to the end. The text appended to the end is called a "variant". The use of variants will come in handy if we test multiple versions of a layered product or of OpenShift. Please add `-lp-interop` to the "variant" section of the filename.
 
 **Examples:**
 
@@ -66,7 +66,7 @@ To add support for automatically detecting layered product interoperability CI O
 
 1. In the [openshift/release](https://github.com/openshift/release) repository, after you have created a CI configuration file for your scenario in the `ci-operator/config/...` directory and ran the `make update` or `make jobs` command, you should be able to find a CI Operator Job file for your CI configuration generated under `ci-operator/jobs/....`. Find the CI Operator Job file that ends in `-periodics.yaml` and open it.
 2. This file may contain multiple periodic CI Operator Jobs for the same repository, so find the periodic CI Operator Job that matches the CI configuration you'd like alerts for. If you are working with layered product interop testing, the CI Operator Job name should include `-lp-interop`. In this example, the CI Operator Job name is `periodic-ci-windup-windup-ui-tests-v1.0-mtr-ocp4.13-lp-interop-mtr-interop-aws`.
-3. Add a reporter_config stanza, replace the `channel:` value with the channel you're PQE team would like to use and update the `report_template:` with a different message (if you'd like to, this one is very generic and will work in most cases):
+3. Add a reporter_config stanza, replace the `channel:` value with the channel the PQE team would like to use and update the `report_template:` with a different message (if you'd like to, this one is very generic and will work in most cases):
 
 ```yaml
   name: periodic-ci-windup-windup-ui-tests-v1.0-mtr-ocp4.13-lp-interop-mtr-interop-aws
@@ -334,8 +334,7 @@ sub-string match.
   - `lpGA`        --  LP General Availability version.
   - `lpMainline`  --  LP mainline/development version.
   - `lp<X.Y>`     --  A specific LP version (for example, `lp1.2`).
-- The OCP release segment in the CI Operator Job name must use the `-ocp-<ocpRelease>-` form, with each segment separated by `-`. For example, use
-  `-ocp-4.22-`, not `-ocp4.22-`. Sippy does not pick up Job results when the release value is concatenated without the separating hyphen.
+- The OCP Release segment in the CI Operator Job name **MUST** follow the `-ocp-<ocpRelease>-` form (for example, `-ocp-4.22-`).
 
 ----
 
